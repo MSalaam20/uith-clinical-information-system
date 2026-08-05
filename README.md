@@ -12,15 +12,18 @@ Do not enter real patient information in an unsecured development environment.
 
 - Python 3.11, Django 5.0, Django REST Framework 3.14
 - Djoser and SimpleJWT authentication
-- MySQL-compatible database through PyMySQL
-- React 18, Redux Toolkit, Bootstrap, Material UI and RJSF
+- MariaDB/MySQL-compatible database through PyMySQL 1.1.1
+- React 18, Redux Toolkit, Axios, Bootstrap, FullCalendar and RJSF
+- phpMyAdmin as an optional database-administration interface only
 - Nginx and Docker Compose
 - Swagger and Redoc in development
 
-MySQL is the required database engine. The Docker environment uses MySQL 8.0.
-The inspected local database server is MariaDB 10.4.32, which is
-MySQL-compatible, with InnoDB tables and `utf8mb4` encoding. A current MySQL 8
-release is recommended for new deployments.
+MariaDB/MySQL is the required database engine. The active local server is
+MariaDB 10.4.32 through PyMySQL, with InnoDB tables and `utf8mb4` encoding.
+This completion does not force a local MySQL 8 upgrade. The optional Docker
+environment retains a MySQL 8 service for independent container deployments.
+The implementation does not use PostgreSQL. phpMyAdmin may inspect or administer
+the database, but the application backend remains Django.
 
 ## Project structure
 
@@ -44,7 +47,8 @@ EHR/
 ## Prerequisites
 
 - Python 3.11 or a compatible supported Python version
-- MySQL 8.0 or a compatible current MySQL server
+- The working MariaDB 10.4.32 server, or a compatible MySQL/MariaDB server
+- phpMyAdmin when a graphical database-administration interface is desired
 - Node.js 20 LTS and npm
 - Docker Desktop only when using the container workflow
 
@@ -53,21 +57,30 @@ EHR/
 Use `infra/.env.example` as the template. Required production values include:
 
 ```dotenv
-SECRET_KEY=replace-with-a-long-random-production-secret
+DJANGO_SECRET_KEY=replace-with-a-long-random-production-secret
 DJANGO_DEBUG=False
-ALLOWED_HOSTS=localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
-CSRF_TRUSTED_ORIGINS=http://localhost:3000,http://localhost:8000
+DJANGO_ALLOWED_HOSTS=ehr.example.invalid
+DJANGO_CORS_ALLOWED_ORIGINS=https://ehr.example.invalid
+DJANGO_CSRF_TRUSTED_ORIGINS=https://ehr.example.invalid
 DB_ENGINE=django.db.backends.mysql
 DB_NAME=uith_ehr_db
 DB_USER=uith_ehr_user
 DB_PASSWORD=replace-with-a-strong-database-password
 DB_HOST=127.0.0.1
 DB_PORT=3306
+DJANGO_USE_PROXY_SSL_HEADER=True
+DJANGO_SECURE_SSL_REDIRECT=True
+DJANGO_SESSION_COOKIE_SECURE=True
+DJANGO_CSRF_COOKIE_SECURE=True
+DJANGO_SECURE_HSTS_SECONDS=31536000
+DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+DJANGO_SECURE_HSTS_PRELOAD=True
+DJANGO_API_DOCS_PUBLIC=False
 ```
 
 The legacy `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST` and
-`MYSQL_PORT` names remain supported for existing local environments. Secret
+`MYSQL_PORT` names remain supported for existing local environments. Legacy
+security variable names also remain usable where previously configured. Secret
 `.env` files are ignored by Git.
 
 ## Local database setup
@@ -83,7 +96,10 @@ GRANT ALL PRIVILEGES ON uith_ehr_db.* TO 'uith_ehr_user'@'localhost';
 ```
 
 InnoDB is required for transactions, foreign keys and referential integrity.
-The Django connection also enables strict transactional SQL mode.
+The Django connection also enables strict transactional SQL mode. For the
+existing local database, use phpMyAdmin to inspect the database, engine,
+collation and indexes; never expose phpMyAdmin publicly or embed its credentials
+in this application.
 
 ## Backend setup
 
@@ -157,6 +173,18 @@ The DRF default is `IsAuthenticated`. Public access is explicitly limited to
 authentication endpoints and development API documentation. A denied role gets
 HTTP 403; a missing or invalid token gets HTTP 401.
 
+No default administrator password is seeded. Before an administrator demo,
+create an account interactively and assign its automatically created clinic
+profile the administrator role:
+
+```powershell
+python manage.py createsuperuser
+python manage.py shell -c "from users.models import Profile,Role; p=Profile.objects.get(user__username='YOUR_ADMIN_USERNAME'); p.role=Role.ROLE_ADMIN; p.save(update_fields=['role'])"
+```
+
+Use a synthetic username in demonstrations and never place the chosen password
+in source control, shell scripts or screenshots.
+
 ## Main API routes
 
 | Route | Purpose |
@@ -166,6 +194,7 @@ HTTP 403; a missing or invalid token gets HTTP 401.
 | `GET /api/profile/me/` | Authenticated profile and role |
 | `/api/patients/` | Patient CRUD, search and administrator archive |
 | `/api/appointments/` | Appointment CRUD and cancellation |
+| `PATCH /api/appointments/{id}/status/` | Permitted appointment status change |
 | `/api/visits/` | Structured encounters |
 | `/api/vital-signs/` | Structured observations |
 | `/api/clinical-notes/` | Clinical and nursing notes |
@@ -176,10 +205,34 @@ HTTP 403; a missing or invalid token gets HTTP 401.
 | `/api/icd-11/search/` | Curated local ICD-11 demonstration search |
 | `/api/audit-logs/` | Administrator-only append-oriented audit trail |
 | `/api/staff/` | Administrator-only staff listing and role assignment |
+| `PATCH /api/staff/{id}/status/` | Administrator-only activation/deactivation |
 | `/api/dashboard/summary/` | Role-filtered live dashboard values |
 
 Swagger is available at `/swagger/` and Redoc at `/redoc/` when
 `DJANGO_DEBUG=True`. Production documentation access is administrator-only.
+
+## Completed clinical workflow
+
+The React patient workspace supports the daily workflow without requiring
+Swagger:
+
+1. Sign in through the role-appropriate portal.
+2. Search for or register a patient and open `/patients/{id}`.
+3. Review demographics, visits, vitals, diagnoses, notes, prescriptions,
+   appointments and custom records in separate tabs.
+4. Create or edit an open visit and optionally link an appointment.
+5. Record validated vital signs; BMI is calculated by the backend.
+6. Add an authored clinical or nursing note and explicitly choose whether it is
+   visible in the student portal.
+7. Search the curated ICD-11 subset and add an ICD-linked diagnosis.
+8. Search or create a medication presentation and create an atomic prescription
+   containing one or more items.
+9. Complete the visit and view the complete history.
+10. Manage calendar appointments according to role.
+
+Administrators additionally have `/staff` and `/audit-logs` workspaces. Students
+are automatically routed to their linked patient and cannot retrieve another
+patient by changing a URL.
 
 ## Verification
 
@@ -197,10 +250,18 @@ Frontend:
 
 ```powershell
 cd frontend
+npm.cmd ci
 npm.cmd ls --depth=0
 npm.cmd test
 npm.cmd run build
 ```
+
+Latest verified local result (5 August 2026): Django found 43 tests and all 43
+passed in 145.029 seconds; Jest ran 15 tests across seven suites and all 15
+passed in 18.215 seconds. The optimized React build completed successfully at
+311.98 kB JavaScript and 40.66 kB CSS after gzip. React Router future-flag
+notices occur in its test harness, and the older CRA toolchain emits a Node
+`fs.F_OK` deprecation notice; neither prevented testing or compilation.
 
 Docker, when installed:
 
@@ -223,21 +284,24 @@ docker compose build
   assigned generated names and constrained to their record directory.
 - Audit metadata excludes common password, token and secret keys. Audit records
   are read-only through the API and Django administration.
+- Multi-item prescriptions are validated before persistence and created inside
+  a database transaction. A failed item cannot leave a partial prescription.
+- Clinical notes default to staff-only and must be explicitly marked patient
+  visible before they are returned through a student visit response.
 - Do not deploy with the example secrets, demo passwords, `DJANGO_DEBUG=True`,
   or unrestricted documentation access.
 
 ## Known limitations
 
-- The local MariaDB 10.4 server is older than the recommended MySQL 8 deployment
-  target even though migration and test compatibility was verified.
 - ICD-11 search is a seven-term curated local demonstration subset, not the full
   WHO API and not a claim of full ICD or FHIR compliance.
-- Normalized visit, diagnosis and prescription APIs are implemented, but the
-  existing React clinical workspace still emphasizes schema-driven records;
-  dedicated polished forms for every normalized entity remain future work.
 - Failed login auditing records the account identifier and outcome but not the
   request IP because SimpleJWT serializer validation has no request context in
   the current implementation.
+- Docker execution is not verified on this computer because Docker Desktop is
+  not installed; local Django, React and MariaDB are the verified path.
+- The automated tests are focused backend and component tests rather than a full
+  Playwright/Cypress browser suite. Follow `DEFENCE_DEMO.md` for the manual path.
 - `npm audit --omit=dev` currently reports two moderate React Router advisories.
   The available v7 releases overlap with a newer high-severity RSC advisory, so
   the verified v6 line was retained. This client uses no SSR/RSC and no
@@ -259,3 +323,6 @@ PrescriptionItem and AuditLog, while describing Record/Schema/Template as the
 optional dynamic-form subsystem. API and testing chapters should include
 `/api/profile/me/`, portal separation, ownership checks, 401/403 behavior,
 normalized clinical routes, audit logging and the automated test evidence.
+
+See `ACADEMIC_CORRECTIONS.md` for exact report edits and `DEFENCE_DEMO.md` for
+the defence-day demonstration sequence.
