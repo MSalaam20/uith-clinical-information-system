@@ -8,7 +8,7 @@ import { useReducer, useRef, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { closeForm } from "../../slices/patientFormSlice";
 import { createPatient } from "../../slices/patientForm/createPatient";
-import { deletePatient } from "../../slices/patientForm/deletePatient";
+import { archivePatient } from "../../slices/patientForm/deletePatient";
 import { deletePhotoPatient } from "../../slices/patientForm/deletePhotoPatient";
 import { updatePatient } from "../../slices/patientForm/updatePatient";
 import { fetchPatients } from "../../slices/PatientsSlice";
@@ -24,6 +24,8 @@ const PatientForm = () => {
   const dispatchRedux = useDispatch();
   const patientFormStatus = useSelector((state) => state.patientForm.status);
   const loadedPatient = useSelector((state) => state.patientForm.patient);
+  const role = useSelector((state) => state.auth.profile?.role);
+  const canArchive = role === "AD";
 
   useEffect(() => {
     if (loadedPatient) {
@@ -54,10 +56,10 @@ const PatientForm = () => {
   const currentPage = useSelector((state) => state.patients.currentPage);
 
   const createPatientData = () => {
-    dispatchRedux(createPatient(patient, dispatch))
+    dispatchRedux(createPatient(patient))
       .then(() => {
         dispatchRedux(closeForm()); // Закрываем модальное окно после успешного выполнения
-        dispatchRedux(fetchPatients(1, dispatch)); // Запрашиваем данные о пациентах снова
+        dispatchRedux(fetchPatients({ page: 1, filters: {} }));
         dispatch({ type: "reset" }); // Сбрасываем состояние формы
       })
       .catch((error) => {
@@ -70,7 +72,7 @@ const PatientForm = () => {
     )
       .then(() => {
         dispatchRedux(closeForm()); // Закрываем модальное окно после успешного выполнения
-        dispatchRedux(fetchPatients(currentPage, dispatch)); // Запрашиваем данные о пациентах снова
+        dispatchRedux(fetchPatients({ page: currentPage, filters: {} }));
         dispatch({ type: "reset" }); // Сбрасываем состояние формы
       })
       .catch(handleError);
@@ -96,35 +98,30 @@ const PatientForm = () => {
     }
   };
 
-  const deletePatientData = () => {
-    dispatchRedux(deletePhotoPatient(patient.id, dispatch))
+  const archivePatientData = (reason) => {
+    dispatchRedux(archivePatient({ patientId: patient.id, reason }))
       .then(() => {
-        dispatchRedux(deletePatient(patient.id, dispatch))
-          .then(() => {
-            dispatchRedux(closeForm()); // Закрываем модальное окно после успешного выполнения
-            dispatchRedux(fetchPatients(currentPage, dispatch)); // Запрашиваем данные о пациентах снова
-            dispatch({ type: "reset" }); // Сбрасываем состояние формы
-          })
-          .catch((error) => {
-            console.error("Ошибка при удалении пациента:", error);
-          });
+        dispatchRedux(closeForm());
+        dispatchRedux(fetchPatients({ page: currentPage, filters: {} }));
+        dispatch({ type: "reset" });
       })
-      .catch((error) => {
-        console.error("Ошибка при удалении фотографии пациента:", error);
-      });
+      .catch((error) => console.error("Unable to archive patient:", error));
   };
 
   const handleDeletePatient = (e) => {
     e.preventDefault();
-    if (patientFormStatus === "idle") {
+    if (patientFormStatus === "idle" && canArchive) {
       if (patient.id) {
-        deletePatientData();
+        const reason = window.prompt("Enter the reason for archiving this patient:");
+        if (reason?.trim() && window.confirm("Archive this patient profile?")) {
+          archivePatientData(reason.trim());
+        }
       }
     }
   };
 
   useEffect(() => {
-    dispatchRedux(fetchPatients(currentPage, dispatch));
+    dispatchRedux(fetchPatients({ page: currentPage, filters: {} }));
   }, [currentPage, dispatchRedux]);
 
   const handleError = (error) => {
@@ -143,6 +140,7 @@ const PatientForm = () => {
               <Form.Control
                 type="file"
                 name="photo"
+                accept="image/jpeg,image/png,image/webp"
                 ref={fileInput}
                 onChange={handleFileChange}
               />
@@ -173,6 +171,7 @@ const PatientForm = () => {
                 name="first_name"
                 value={patient.first_name}
                 onChange={handleChange}
+                required
               />
             </Col>
           </Form.Group>
@@ -201,6 +200,7 @@ const PatientForm = () => {
                 name="last_name"
                 value={patient.last_name}
                 onChange={handleChange}
+                required
               />
             </Col>
           </Form.Group>
@@ -215,6 +215,8 @@ const PatientForm = () => {
                 name="date_of_birth"
                 value={patient.date_of_birth}
                 onChange={handleChange}
+                max={new Date().toISOString().split("T")[0]}
+                required
               />
             </Col>
             <Form.Label column sm={2}>
@@ -281,16 +283,18 @@ const PatientForm = () => {
                 Submit
               </Button>
             </Col>
-            <Col sm={6}>
-              <Button
-                variant="danger"
-                type="button"
-                onClick={handleDeletePatient}
-                className="my-button"
-              >
-                Delete
-              </Button>
-            </Col>
+            {canArchive && patient.id && (
+              <Col sm={6}>
+                <Button
+                  variant="warning"
+                  type="button"
+                  onClick={handleDeletePatient}
+                  className="my-button"
+                >
+                  Archive patient
+                </Button>
+              </Col>
+            )}
           </Form.Group>
         </Form>
       </Card.Body>

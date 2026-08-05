@@ -5,19 +5,22 @@ import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Card from "react-bootstrap/Card";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { login } from "../../slices/authForm/login";
 
 const LoginForm = ({ onLoginSuccess, portalType = "staff" }) => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isStudentPortal = portalType === "student";
+  const loginStatus = useSelector((state) => state.auth.status);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
     if (identifier && password) {
       try {
         await dispatch(
@@ -28,10 +31,10 @@ const LoginForm = ({ onLoginSuccess, portalType = "staff" }) => {
         }
         navigate("/dashboard");
       } catch (error) {
-        console.error("Login failed:", error);
+        setErrorMessage(String(error || "Login failed."));
       }
     } else {
-      console.error("Login identifier and password are required");
+      setErrorMessage("Login identifier and password are required.");
     }
   };
 
@@ -80,8 +83,19 @@ const LoginForm = ({ onLoginSuccess, portalType = "staff" }) => {
           </Form.Group>
 
           <Form.Group as={Row} className="mb-3" controlId="submitLoginButton">
-            <Button className="clinic-login-submit" type="submit">
-              {isStudentPortal ? "Sign in as student" : "Sign in to clinic"}
+            {errorMessage && (
+              <p className="text-danger" role="alert">{errorMessage}</p>
+            )}
+            <Button
+              className="clinic-login-submit"
+              type="submit"
+              disabled={loginStatus === "loading"}
+            >
+              {loginStatus === "loading"
+                ? "Signing in..."
+                : isStudentPortal
+                  ? "Sign in as student"
+                  : "Sign in to clinic"}
             </Button>
           </Form.Group>
         </Form>

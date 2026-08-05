@@ -5,20 +5,23 @@ from django.urls import include, path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from .views import icd11_search
+from .views import dashboard_summary, icd11_search
 
+
+schema_permission = permissions.AllowAny if settings.DEBUG else permissions.IsAdminUser
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="EMR API",
+      title="UITH School Complex Clinic EHR API",
       default_version='v1',
-      description="Test description",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="contact@snippets.local"),
-      license=openapi.License(name="BSD License"),
+      description=(
+          "Authenticated APIs for patients, appointments, structured clinical "
+          "visits, diagnoses, prescriptions, records, and audit logs."
+      ),
+      contact=openapi.Contact(email="schoolclinic@example.invalid"),
    ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
+   public=settings.DEBUG,
+   permission_classes=(schema_permission,),
 )
 
 urlpatterns = [
@@ -27,6 +30,7 @@ urlpatterns = [
     path('api/', include('records.urls', namespace='records')),
     path('api/', include('patients.urls', namespace='patients')),
     path('api/icd-11/search/', icd11_search, name='icd11-search'),
+    path('api/dashboard/summary/', dashboard_summary, name='dashboard-summary'),
     path(
         'swagger<format>/', schema_view.without_ui(cache_timeout=0),
         name='schema-json'

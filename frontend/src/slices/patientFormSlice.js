@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { createPatient } from "./patientForm/createPatient";
-import { deletePatient } from "./patientForm/deletePatient";
+import { archivePatient } from "./patientForm/deletePatient";
 import { deletePhotoPatient } from "./patientForm/deletePhotoPatient";
 import { updatePatient } from "./patientForm/updatePatient";
 import { loadPatient } from "./patientForm/loadPatient";
@@ -36,8 +36,8 @@ const patientFormSlice = createSlice({
     builder.addCase(updatePatient.fulfilled, (state, action) => {
       state.status = "succeeded";
     });
-    builder.addCase(deletePatient.fulfilled, (state, action) => {
-      state.status = "deleted";
+    builder.addCase(archivePatient.fulfilled, (state) => {
+      state.status = "archived";
     });
     builder.addCase(deletePhotoPatient.fulfilled, (state, action) => {
       state.status = "deleted";

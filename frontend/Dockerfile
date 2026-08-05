@@ -1,14 +1,14 @@
 
-FROM node:lts-alpine as build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-COPY package*.json ./
-
-COPY node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
-
 RUN npm run build
 
-RUN cp -r build result_build
+FROM nginx:1.27-alpine
+
+COPY --from=build /app/build /usr/share/nginx/html

@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { apiRequest } from "../../api/apiRequest";
-import { BASE_URL, PATIENTS } from "../../api/apiConfig";
+import { PATIENTS } from "../../api/apiConfig";
 
 export const updatePatient = createAsyncThunk(
   "patientForm/updatePatient",
@@ -24,7 +24,7 @@ export const updatePatient = createAsyncThunk(
 
     const response = await apiRequest(
       "putForm",
-      `${BASE_URL}${PATIENTS}${patient.id}/`,
+      `${PATIENTS}${patient.id}/`,
       formData,
       { dispatch, rejectWithValue }
     );

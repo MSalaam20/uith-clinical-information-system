@@ -25,6 +25,8 @@ const PatientsList = () => {
   const showForm = useSelector((state) => state.patientForm.showForm);
   const [filters, setFilters] = useState({});
   const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const role = useSelector((state) => state.auth.profile?.role);
+  const canManagePatients = ["AD", "NS", "RC"].includes(role);
 
   const handleFilterChange = (event) => {
     setFilters({
@@ -74,12 +76,14 @@ const PatientsList = () => {
             <thead>
               <tr>
                 <th colSpan="3">
-                  <Button
-                    className="my-button"
-                    onClick={() => dispatch(openForm())}
-                  >
-                    Add patient
-                  </Button>
+                  {canManagePatients && (
+                    <Button
+                      className="my-button"
+                      onClick={() => dispatch(openForm())}
+                    >
+                      Add patient
+                    </Button>
+                  )}
                 </th>
               </tr>
             </thead>
@@ -99,17 +103,20 @@ const PatientsList = () => {
                     {patient.first_name} {patient.middle_name}{" "}
                     {patient.last_name}, {patient.date_of_birth}
                   </td>
-                  <td
-                    className={`patient-profile ${
-                      patient.id === selectedPatientId ? "selected" : ""
-                    }`}
-                    onClick={() => {
-                      dispatch(loadPatient(patient.id));
-                      dispatch(openForm());
-                      setSelectedPatientId(patient.id);
-                    }}
-                  >
-                    <RiEdit2Line />
+                  <td>
+                    {canManagePatients && (
+                      <Button
+                        variant="link"
+                        aria-label={`Edit ${patient.first_name} ${patient.last_name}`}
+                        onClick={() => {
+                          dispatch(loadPatient(patient.id));
+                          dispatch(openForm());
+                          setSelectedPatientId(patient.id);
+                        }}
+                      >
+                        <RiEdit2Line />
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}

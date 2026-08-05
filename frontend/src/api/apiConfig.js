@@ -1,13 +1,22 @@
 export const BASE_URL =
   process.env.REACT_APP_BASE_URL || "http://localhost:8000/api/";
 export const LOGIN_ENDPOINT = "auth/jwt/create/";
+export const REFRESH_ENDPOINT = "auth/jwt/refresh/";
 export const PATIENTS = "patients/";
 export const APPOINTMENTS = "appointments/";
 export const ME = "auth/users/me/";
 export const PROFILE = "profile/";
+export const PROFILE_ME = "profile/me/";
 export const RECORDS = "records/";
 export const USERS = "users/";
 export const SCHEMAS = "schemas/";
 export const TEMPLATES = "templates/";
 export const ICD11 = "icd-11/";
+export const DASHBOARD_SUMMARY = "dashboard/summary/";
+export const VISITS = "visits/";
+export const VITAL_SIGNS = "vital-signs/";
+export const DIAGNOSES = "diagnoses/";
+export const MEDICATIONS = "medications/";
+export const PRESCRIPTIONS = "prescriptions/";
+export const AUDIT_LOGS = "audit-logs/";
 export const PAGE_SIZE = 15;

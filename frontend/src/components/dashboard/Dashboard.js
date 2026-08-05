@@ -1,59 +1,79 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
+import { useSelector } from "react-redux";
 import {
   RiCalendarCheckLine,
   RiDashboard3Line,
   RiFileList3Line,
   RiHeartPulseLine,
 } from "react-icons/ri";
+import { DASHBOARD_SUMMARY } from "../../api/apiConfig";
+import { apiFetch } from "../../api/apiFetch";
 import "./DashboardWorkspace.css";
 
-const dashboardCards = [
-  {
-    icon: <RiHeartPulseLine />,
-    title: "Patient Workflow",
-    text: "Use the Patients module to register student patients, update biodata, and manage clinic records.",
-  },
-  {
-    icon: <RiCalendarCheckLine />,
-    title: "Appointments",
-    text: "Review scheduled clinic appointments from the live backend calendar.",
-  },
-  {
-    icon: <RiFileList3Line />,
-    title: "Clinical Records",
-    text: "Open a patient profile to review visits, vitals, diagnoses, and treatment summaries.",
-  },
-];
-
 const Dashboard = () => {
+  const profile = useSelector((state) => state.auth.profile);
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    apiFetch(DASHBOARD_SUMMARY)
+      .then((data) => mounted && setSummary(data))
+      .catch(() => mounted && setError("Dashboard values could not be loaded."));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const cards = summary
+    ? [
+        {
+          icon: <RiHeartPulseLine />,
+          title: profile?.role === "PT" ? "My patient profile" : "Active patients",
+          value: summary.patients,
+          text: `${summary.patients_registered_today} registered today`,
+        },
+        {
+          icon: <RiCalendarCheckLine />,
+          title: "Appointments today",
+          value: summary.appointments_today,
+          text: `${summary.pending_appointments} pending appointments`,
+        },
+        {
+          icon: <RiFileList3Line />,
+          title: "Clinical activity",
+          value: summary.visits,
+          text: `${summary.records} legacy dynamic records`,
+        },
+      ]
+    : [];
+
   return (
     <main className="clinic-dashboard-workspace">
       <Container fluid="lg">
         <section className="dashboard-welcome-panel">
-          <div className="dashboard-title-icon">
-            <RiDashboard3Line />
-          </div>
+          <div className="dashboard-title-icon"><RiDashboard3Line /></div>
           <div>
             <p className="dashboard-kicker">Authenticated Clinic Workspace</p>
-            <h1>Clinic Dashboard</h1>
-            <p>
-              Select a protected module from the navigation bar to manage UITH
-              School Complex Clinic operations.
-            </p>
+            <h1>{profile?.role === "PT" ? "My Health Dashboard" : "Clinic Dashboard"}</h1>
+            <p>Signed in as {profile?.role_display || "clinic user"}.</p>
           </div>
         </section>
 
+        {!summary && !error && <p>Loading current clinic values...</p>}
+        {error && <p className="text-danger" role="alert">{error}</p>}
         <Row className="g-4">
-          {dashboardCards.map((card) => (
+          {cards.map((card) => (
             <Col md={4} key={card.title}>
               <Card className="dashboard-module-card h-100">
                 <Card.Body>
                   <div className="dashboard-module-icon">{card.icon}</div>
                   <h2>{card.title}</h2>
+                  <div className="fs-2 fw-bold">{card.value}</div>
                   <p>{card.text}</p>
                 </Card.Body>
               </Card>

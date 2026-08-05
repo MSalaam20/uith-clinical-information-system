@@ -32,6 +32,8 @@ const PatientProfile = () => {
   const totalPages = useSelector((state) => state.records.totalPages);
   const schemas = useSelector((state) => state.schema.schemas);
   const patient = useSelector((state) => state.patientForm.patient);
+  const role = useSelector((state) => state.auth.profile?.role);
+  const canEditRecords = ["AD", "DC"].includes(role);
   const records = useSelector((state) => state.records.records);
   const showForm = useSelector((state) => state.schema.formOpen);
   const [selectedSchema, setSelectedSchema] = useState(null);
@@ -83,8 +85,10 @@ const PatientProfile = () => {
   }, [dispatch, patient, currentPage, filters]);
 
   useEffect(() => {
-    dispatch(fetchSchemas({ page: 1 }));
-  }, [dispatch]);
+    if (canEditRecords) {
+      dispatch(fetchSchemas({ page: 1 }));
+    }
+  }, [canEditRecords, dispatch]);
 
   if (!patient) {
     return (
@@ -164,7 +168,7 @@ const PatientProfile = () => {
                 <thead>
                   <tr>
                     <th colSpan="3">
-                      <Dropdown>
+                      {canEditRecords && <Dropdown>
                         <Dropdown.Toggle
                           variant="primary"
                           id="dropdown-basic"
@@ -186,7 +190,7 @@ const PatientProfile = () => {
                             </Dropdown.Item>
                           ))}
                         </Dropdown.Menu>
-                      </Dropdown>
+                      </Dropdown>}
                     </th>
                   </tr>
                 </thead>
@@ -211,7 +215,7 @@ const PatientProfile = () => {
                       <td colSpan="1">
                         {new Date(record.created_at).toLocaleDateString()}
                       </td>
-                      <td
+                      {canEditRecords && <td
                       // className={`patient-profile ${
                       //   patient.id === selectedPatientId ? "selected" : ""
                       // }`}
@@ -222,7 +226,7 @@ const PatientProfile = () => {
                       // }}
                       >
                         <RiEdit2Line />
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>

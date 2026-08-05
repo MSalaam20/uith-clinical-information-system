@@ -20,6 +20,8 @@ import { authSessionExpired } from "./slices/AuthSlice";
 const App = () => {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const role = useSelector((state) => state.auth.profile?.role);
+  const staffRoles = ["AD", "DC", "NS", "RC", "CO"];
 
   useEffect(() => {
     const handleExpiredSession = () => {
@@ -43,7 +45,7 @@ const App = () => {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute isAuthenticated={isAuthenticated} role={role}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -51,7 +53,7 @@ const App = () => {
           <Route
             path="/patients"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute isAuthenticated={isAuthenticated} role={role}>
                 <PatientMainPage expand="lg" />
               </ProtectedRoute>
             }
@@ -59,7 +61,11 @@ const App = () => {
           <Route
             path="/icd"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                role={role}
+                allowedRoles={staffRoles}
+              >
                 <ICD expand="lg" />
               </ProtectedRoute>
             }
@@ -67,7 +73,11 @@ const App = () => {
           <Route
             path="/icd-11"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                role={role}
+                allowedRoles={staffRoles}
+              >
                 <ICD expand="lg" />
               </ProtectedRoute>
             }
@@ -75,7 +85,7 @@ const App = () => {
           <Route
             path="/today-schedule"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute isAuthenticated={isAuthenticated} role={role}>
                 <TodaySchedule />
               </ProtectedRoute>
             }
@@ -83,7 +93,11 @@ const App = () => {
           <Route
             path="/setup"
             element={
-              <ProtectedRoute isAuthenticated={isAuthenticated}>
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                role={role}
+                allowedRoles={staffRoles}
+              >
                 <Setup />
               </ProtectedRoute>
             }

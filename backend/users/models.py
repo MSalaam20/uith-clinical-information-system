@@ -62,31 +62,45 @@ class Profile(models.Model):
 
     @property
     def is_user(self):
-        return self.role == self.Role.ROLE_USER
+        return self.role == Role.ROLE_USER
 
     @property
     def is_patient(self):
-        return self.role == self.Role.ROLE_PATIENT
+        return self.role == Role.ROLE_PATIENT
+
+    @property
+    def is_student(self):
+        return self.role == Role.ROLE_PATIENT
 
     @property
     def is_admin(self):
-        return self.role == self.Role.ROLE_ADMIN
+        return self.role == Role.ROLE_ADMIN
 
     @property
     def is_doctor(self):
-        return self.role == self.Role.ROLE_DOCTOR
+        return self.role == Role.ROLE_DOCTOR
 
     @property
     def is_nurse(self):
-        return self.role == self.Role.ROLE_NURSE
+        return self.role == Role.ROLE_NURSE
 
     @property
     def is_receptionist(self):
-        return self.role == self.Role.ROLE_RECEPTIONIST
+        return self.role == Role.ROLE_RECEPTIONIST
 
     @property
     def is_coordinator(self):
-        return self.role == self.Role.ROLE_COORDINATOR
+        return self.role == Role.ROLE_COORDINATOR
+
+    @property
+    def is_staff(self):
+        return self.role in {
+            Role.ROLE_ADMIN,
+            Role.ROLE_DOCTOR,
+            Role.ROLE_NURSE,
+            Role.ROLE_RECEPTIONIST,
+            Role.ROLE_COORDINATOR,
+        }
 
     def __str__(self):
         return f'{self.role}: {self.user}'

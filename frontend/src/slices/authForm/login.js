@@ -1,32 +1,41 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import apiClient from "../../api/apiClient";
+import { LOGIN_ENDPOINT, PROFILE_ME } from "../../api/apiConfig";
+import { clearStoredAuth, saveAuthSession } from "../../api/authSession";
 import { handleError } from "../../components/error/handlerError";
-import "react-toastify/dist/ReactToastify.css";
-import { LOGIN_ENDPOINT, ME, PROFILE } from "../../api/apiConfig";
+
+const STAFF_ROLES = new Set(["AD", "DC", "NS", "RC", "CO"]);
+const STUDENT_ROLES = new Set(["PT"]);
 
 export const login = createAsyncThunk(
   "auth/login",
-  async ({ username, password, portalType = "staff" }, { dispatch, rejectWithValue }) => {
+  async ({ username, password, portalType = "staff" }, thunkApi) => {
+    const { dispatch, rejectWithValue } = thunkApi;
     try {
       const response = await apiClient.post(LOGIN_ENDPOINT, {
         username,
         password,
+        portal_type: portalType,
       });
-      const token = response.data ? response.data.access : null;
-      if (token) {
-        localStorage.setItem("token", token);
-        localStorage.setItem("username", username);
-      }
-      const meResponse = await apiClient.get(ME);
-      const id = meResponse.data.id;
-      const profileResponse = await apiClient.get(`${PROFILE}${id}/`);
+      const { access, refresh } = response.data;
+      saveAuthSession({ access, refresh, username, portalType });
+
+      const profileResponse = await apiClient.get(PROFILE_ME);
       const profile = profileResponse.data;
-      if (profile) {
-        localStorage.setItem("id", id);
-        localStorage.setItem("profile", JSON.stringify(profile));
+      const allowedRoles = portalType === "student" ? STUDENT_ROLES : STAFF_ROLES;
+      if (!allowedRoles.has(profile.role)) {
+        clearStoredAuth();
+        throw new Error(
+          portalType === "student"
+            ? "This account belongs to clinical staff. Use the Clinical Staff Portal."
+            : "This account is not authorized for the Clinical Staff Portal."
+        );
       }
-      return { token, username, id, profile, portalType };
+
+      saveAuthSession({ access, refresh, username, profile, portalType });
+      return { token: access, refreshToken: refresh, username, profile, portalType };
     } catch (error) {
+      clearStoredAuth();
       return handleError(error, dispatch, rejectWithValue);
     }
   }

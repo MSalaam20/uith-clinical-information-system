@@ -61,7 +61,7 @@ const demoCredentials = [
   ["Doctor", "Dr. Jeremiah", "dr.jeremiah", "Doctor@123"],
   ["Nurse", "Nurse Fatima", "nurse.fatima", "Nurse@123"],
   ["Receptionist", "Mr. Ibrahim", "mr.ibrahim", "Reception@123"],
-  ["Student", "Student Patient", "student.patient", "Student@123"],
+  ["Student", "Amina Sulaiman", "uith_2021_52HL034", "Student@123"],
 ];
 
 const LandingPage = () => {

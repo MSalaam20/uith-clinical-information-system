@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Card, Button, Container, Col, Row } from "react-bootstrap";
 import validator from "@rjsf/validator-ajv8";
-import Form from "@rjsf/bootstrap-4";
+import Form from "@rjsf/core";
 import { createRecord } from "../../slices/recordForm/createRecord";
 import { closeSchemaForm } from "../../slices/schema/schemaReducer";
 import { fetchRecords } from "../../slices/recordsSlice";

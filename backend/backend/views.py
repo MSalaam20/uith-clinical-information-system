@@ -1,6 +1,12 @@
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from patients.models import Appointment, Patient
+from records.models import Record, Visit
+from users.models import Role
+from users.permissions import IsAuthenticatedClinicUser
 
 
 ICD11_TERMS = [
@@ -57,4 +63,43 @@ def icd11_search(request):
         or query in term['chapter'].lower()
     ]
 
-    return Response({'results': results})
+    return Response({
+        'terminology': 'ICD-11',
+        'source': 'curated local demonstration subset',
+        'results': results,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAuthenticatedClinicUser])
+def dashboard_summary(request):
+    today = timezone.localdate()
+    profile = getattr(request.user, 'user', None)
+    is_patient = profile is not None and profile.role == Role.ROLE_PATIENT
+
+    patients = Patient.objects.filter(is_active=True)
+    appointments = Appointment.objects.all()
+    records = Record.objects.all()
+    visits = Visit.objects.all()
+
+    if is_patient:
+        patients = patients.filter(user=request.user)
+        appointments = appointments.filter(patient__user=request.user)
+        records = records.filter(patient__user=request.user)
+        visits = visits.filter(patient__user=request.user)
+
+    return Response({
+        'patients': patients.count(),
+        'patients_registered_today': patients.filter(
+            created_at__date=today
+        ).count(),
+        'appointments_today': appointments.filter(
+            scheduled_for__date=today
+        ).count(),
+        'pending_appointments': appointments.filter(
+            status=Appointment.Status.SCHEDULED
+        ).count(),
+        'records': records.count(),
+        'visits': visits.count(),
+        'role': profile.get_role_display() if profile else 'administrator',
+    })

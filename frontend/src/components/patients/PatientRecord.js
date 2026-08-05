@@ -2,7 +2,6 @@ import React from "react";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import { useSelector } from "react-redux";
-import { v4 as uuid } from "uuid";
 import "./Patients.css";
 
 const PatientRecord = () => {
@@ -18,7 +17,7 @@ const PatientRecord = () => {
 
   const ListGroupTemplate = ({ level = 0, title = null, value = null }) => (
     <ListGroup.Item
-      key={uuid()}
+      key={`${level}-${title}`}
       variant="flush"
       style={{ marginLeft: `${level * 20}px`, flex: "1 1 auto" }}
     >
@@ -109,7 +108,6 @@ const PatientRecord = () => {
           <Card.Header>{section.replace(/_/g, " ")}</Card.Header>
           <Card.Body>
             <ListGroup
-              key={uuid()}
               horizontal="lg"
               className="d-flex flex-wrap justify-content-center"
             >

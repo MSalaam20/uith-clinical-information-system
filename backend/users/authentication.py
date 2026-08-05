@@ -1,0 +1,86 @@
+from django.contrib.auth import get_user_model
+from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from users.models import Role
+
+
+STAFF_ROLES = {
+    Role.ROLE_ADMIN,
+    Role.ROLE_DOCTOR,
+    Role.ROLE_NURSE,
+    Role.ROLE_RECEPTIONIST,
+    Role.ROLE_COORDINATOR,
+}
+STUDENT_ROLES = {Role.ROLE_PATIENT}
+
+
+def _log_login(username, success, description, user=None):
+    try:
+        from records.audit import log_action
+
+        log_action(
+            user=user,
+            action='login_succeeded' if success else 'login_failed',
+            resource_type='User',
+            resource_id=getattr(user, 'pk', None),
+            description=description,
+            success=success,
+            metadata={'username': username},
+        )
+    except Exception:
+        return
+
+
+class PortalTokenObtainPairSerializer(TokenObtainPairSerializer):
+    portal_type = serializers.ChoiceField(
+        choices=('staff', 'student'), write_only=True, required=False, default='staff'
+    )
+
+    def validate(self, attrs):
+        portal_type = attrs.pop('portal_type', 'staff')
+        if portal_type not in {'staff', 'student'}:
+            raise AuthenticationFailed('Unknown login portal.')
+
+        username = attrs.get(self.username_field, '')
+        try:
+            data = super().validate(attrs)
+        except AuthenticationFailed:
+            user = get_user_model().objects.filter(username=username).first()
+            _log_login(username, False, 'Invalid login credentials.', user)
+            raise
+
+        profile = getattr(self.user, 'user', None)
+        if profile is None:
+            _log_login(
+                username, False, 'Account has no linked clinic profile.', self.user
+            )
+            raise AuthenticationFailed('No clinic profile is linked to this account.')
+
+        allowed_roles = STAFF_ROLES if portal_type == 'staff' else STUDENT_ROLES
+        if profile.role not in allowed_roles:
+            _log_login(
+                username,
+                False,
+                f'Account rejected by the {portal_type} portal.',
+                self.user,
+            )
+            if portal_type == 'student':
+                raise AuthenticationFailed(
+                    'This account belongs to clinical staff. '
+                    'Use the Clinical Staff Portal.'
+                )
+            raise AuthenticationFailed(
+                'This account is not authorized for the Clinical Staff Portal.'
+            )
+
+        _log_login(username, True, f'Login through the {portal_type} portal.', self.user)
+        return data
+
+
+class PortalTokenObtainPairView(TokenObtainPairView):
+    serializer_class = PortalTokenObtainPairSerializer
+    permission_classes = (AllowAny,)

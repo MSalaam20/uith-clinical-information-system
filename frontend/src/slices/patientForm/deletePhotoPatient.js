@@ -7,7 +7,7 @@ export const deletePhotoPatient = createAsyncThunk(
   async (patientId, { dispatch, rejectWithValue }) => {
     const response = await apiRequest(
       "delete",
-      `${BASE_URL}${PATIENTS}${patientId}/delete_photo`,
+      `${BASE_URL}${PATIENTS}${patientId}/delete_photo/`,
       patientId,
       { dispatch, rejectWithValue }
     );

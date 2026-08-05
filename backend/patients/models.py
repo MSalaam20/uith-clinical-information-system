@@ -1,8 +1,12 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
 
 class Patient(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
     class Gender(models.TextChoices):
         MALE = 'M', 'male'
         FEMALE = 'F', 'female'
@@ -19,7 +23,7 @@ class Patient(models.Model):
     department = models.CharField(max_length=150, blank=True, null=True)
     first_name = models.CharField(max_length=100, blank=True, null=True, )
     middle_name = models.CharField(max_length=100, blank=True, null=True, )
-    last_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100, db_index=True)
     date_of_birth = models.DateField()
     gender = models.CharField(
         max_length=1,
@@ -34,6 +38,32 @@ class Patient(models.Model):
     address = models.CharField(max_length=200, blank=True, null=True, )
     phone_number = models.CharField(max_length=20, blank=True, null=True, )
     email = models.EmailField(blank=True, null=True, )
+    next_of_kin = models.CharField(max_length=200, blank=True)
+    emergency_contact = models.CharField(max_length=20, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archive_reason = models.CharField(max_length=255, blank=True)
+    archived_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='archived_patients',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_patients',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_patients',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -52,7 +82,7 @@ class Appointment(models.Model):
         CANCELLED = 'cancelled', 'cancelled'
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='appointments')
-    scheduled_for = models.DateTimeField()
+    scheduled_for = models.DateTimeField(db_index=True)
     reason = models.CharField(max_length=255)
     status = models.CharField(
         max_length=20,
@@ -82,4 +112,7 @@ class Appointment(models.Model):
 
     class Meta:
         ordering = ['-scheduled_for']
-
+        indexes = [
+            models.Index(fields=['patient', 'scheduled_for']),
+            models.Index(fields=['status', 'scheduled_for']),
+        ]

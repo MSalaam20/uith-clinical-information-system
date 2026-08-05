@@ -5,14 +5,18 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.core.files.storage import default_storage
 from rest_framework.decorators import action
 from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 from .models import Appointment, Patient
 from .serializers import AppointmentSerializer, PatientSerializer
 from .pagination import StandardResultsSetPagination
 from .filters import PatientFilter
 from users.permissions import (
+    CanManageAppointments,
+    CanManagePatients,
     IsAuthenticatedClinicUser,
-    IsNurseReceptionistOrAdmin,
+    IsAdministrator,
 )
+from records.audit import log_action
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -39,18 +43,62 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if end:
             end_datetime = parse_datetime(end)
             if end_datetime:
-                queryset = queryset.filter(scheduled_for__lte=end_datetime)
+                queryset = queryset.filter(scheduled_for__lt=end_datetime)
 
         return queryset
 
     def get_permissions(self):
-        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
-            return [IsAuthenticated(), IsNurseReceptionistOrAdmin()]
+        if self.action in {
+            'create', 'update', 'partial_update', 'destroy', 'cancel'
+        }:
+            return [IsAuthenticated(), CanManageAppointments()]
         return super().get_permissions()
 
     def perform_create(self, serializer):
         profile = getattr(self.request.user, 'user', None)
-        serializer.save(booked_by=profile)
+        appointment = serializer.save(booked_by=profile)
+        log_action(
+            request=self.request,
+            action='appointment_created',
+            resource_type='Appointment',
+            resource_id=appointment.pk,
+            description='Appointment created.',
+        )
+
+    def perform_update(self, serializer):
+        appointment = serializer.save()
+        log_action(
+            request=self.request,
+            action='appointment_updated',
+            resource_type='Appointment',
+            resource_id=appointment.pk,
+            description='Appointment updated.',
+        )
+
+    def perform_destroy(self, instance):
+        appointment_id = instance.pk
+        super().perform_destroy(instance)
+        log_action(
+            request=self.request,
+            action='appointment_deleted',
+            resource_type='Appointment',
+            resource_id=appointment_id,
+            description='Appointment permanently deleted by an authorized user.',
+        )
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        appointment = self.get_object()
+        appointment.status = Appointment.Status.CANCELLED
+        appointment.save(update_fields=['status', 'updated_at'])
+        log_action(
+            request=request,
+            action='appointment_cancelled',
+            resource_type='Appointment',
+            resource_id=appointment.pk,
+            description='Appointment cancelled.',
+        )
+        return Response(self.get_serializer(appointment).data)
 
 
 class PatientViewSet(viewsets.ModelViewSet):
@@ -63,20 +111,85 @@ class PatientViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        if self.request.query_params.get('include_archived') != 'true':
+            queryset = queryset.filter(is_active=True)
         profile = getattr(self.request.user, 'user', None)
         if profile and profile.role == 'PT':
             return queryset.filter(user=self.request.user)
         return queryset
 
     def get_permissions(self):
-        if self.action in {'create', 'update', 'partial_update', 'destroy', 'delete_photo'}:
-            return [IsAuthenticated(), IsNurseReceptionistOrAdmin()]
+        if self.action in {'create', 'update', 'partial_update', 'delete_photo'}:
+            return [IsAuthenticated(), CanManagePatients()]
+        if self.action in {'archive', 'destroy'}:
+            return [IsAuthenticated(), IsAdministrator()]
         return super().get_permissions()
+
+    def perform_create(self, serializer):
+        patient = serializer.save(
+            created_by=self.request.user,
+            updated_by=self.request.user,
+        )
+        log_action(
+            request=self.request,
+            action='patient_created',
+            resource_type='Patient',
+            resource_id=patient.pk,
+            description='Patient registered.',
+        )
+
+    def perform_update(self, serializer):
+        patient = serializer.save(updated_by=self.request.user)
+        log_action(
+            request=self.request,
+            action='patient_updated',
+            resource_type='Patient',
+            resource_id=patient.pk,
+            description='Patient demographics updated.',
+        )
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        patient = self.get_object()
+        reason = str(request.data.get('reason', '')).strip()
+        if not reason:
+            return Response(
+                {'reason': ['An archive reason is required.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        patient.is_active = False
+        patient.archived_at = timezone.now()
+        patient.archived_by = request.user
+        patient.archive_reason = reason
+        patient.updated_by = request.user
+        patient.save(update_fields=[
+            'is_active', 'archived_at', 'archived_by', 'archive_reason',
+            'updated_by', 'updated_at',
+        ])
+        log_action(
+            request=request,
+            action='patient_archived',
+            resource_type='Patient',
+            resource_id=patient.pk,
+            description='Patient archived.',
+            metadata={'reason': reason},
+        )
+        return Response(self.get_serializer(patient).data)
+
+    def perform_destroy(self, instance):
+        patient_id = instance.pk
+        super().perform_destroy(instance)
+        log_action(
+            request=self.request,
+            action='patient_deleted',
+            resource_type='Patient',
+            resource_id=patient_id,
+            description='Patient permanently deleted by an administrator.',
+        )
 
     @action(detail=True, methods=['delete'])
     def delete_photo(self, request, pk=None):
         patient = self.get_object()
-        print(patient.photo)
         if patient.photo:
             if default_storage.exists(patient.photo.name):
                 default_storage.delete(patient.photo.name)
@@ -87,4 +200,11 @@ class PatientViewSet(viewsets.ModelViewSet):
                         )
             patient.photo = None
             patient.save()
+            log_action(
+                request=request,
+                action='patient_photo_deleted',
+                resource_type='Patient',
+                resource_id=patient.pk,
+                description='Patient photograph removed.',
+            )
         return Response(status=status.HTTP_204_NO_CONTENT)

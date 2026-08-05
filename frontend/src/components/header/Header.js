@@ -4,7 +4,7 @@ import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import NavDropdown from "react-bootstrap/NavDropdown";
 import Modal from "react-bootstrap/Modal";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import {
   RiLoginCircleLine,
   RiLogoutCircleRLine,
@@ -34,8 +34,8 @@ const HospitalBadge = () => (
 function Header() {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const profileState = useSelector((state) => state.auth.profile);
-  const profile =
-    typeof profileState === "string" ? JSON.parse(profileState) : profileState;
+  const profile = profileState;
+  const isStudent = profile?.role === "PT";
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showLogin, setShowLogin] = useState(false);
@@ -69,7 +69,7 @@ function Header() {
     <>
       <Navbar expand="lg" className="clinic-navbar">
         <Container fluid>
-          <Navbar.Brand href="/" className="uith-brand">
+          <Navbar.Brand as={Link} to="/" className="uith-brand">
             <HospitalBadge />
             <span>
               UITH School Complex Clinic
@@ -84,13 +84,13 @@ function Header() {
             <Nav className="me-auto clinic-nav-links">
               {isAuthenticated && (
                 <>
-                  <Nav.Link href="/dashboard">
+                  <Nav.Link as={Link} to="/dashboard">
                     <RiDashboard3Line />
                     Clinic Dashboard
                   </Nav.Link>
-                  <Nav.Link href="/patients">
+                  <Nav.Link as={Link} to="/patients">
                     <RiUser3Line />
-                    Student Patients
+                    {isStudent ? "My Health Record" : "Student Patients"}
                   </Nav.Link>
                   <NavDropdown
                     title={
@@ -100,24 +100,28 @@ function Header() {
                     }
                     id="appointments-nav-dropdown"
                   >
-                    <NavDropdown.Item href="/today-schedule">
+                    <NavDropdown.Item as={Link} to="/today-schedule">
                       Today
                     </NavDropdown.Item>
-                    <NavDropdown.Item href="/today-schedule?range=week">
+                    <NavDropdown.Item as={Link} to="/today-schedule?range=week">
                       This week
                     </NavDropdown.Item>
-                    <NavDropdown.Item href="/today-schedule?range=month">
+                    <NavDropdown.Item as={Link} to="/today-schedule?range=month">
                       This month
                     </NavDropdown.Item>
                   </NavDropdown>
-                  <Nav.Link href="/setup">
-                    <RiSettingsLine />
-                    Clinic Setup
-                  </Nav.Link>
-                  <Nav.Link href="/icd-11">
-                    <RiStethoscopeLine />
-                    ICD-11
-                  </Nav.Link>
+                  {!isStudent && (
+                    <>
+                      <Nav.Link as={Link} to="/setup">
+                        <RiSettingsLine />
+                        Clinic Setup
+                      </Nav.Link>
+                      <Nav.Link as={Link} to="/icd-11">
+                        <RiStethoscopeLine />
+                        ICD-11
+                      </Nav.Link>
+                    </>
+                  )}
                 </>
               )}
             </Nav>
@@ -126,7 +130,7 @@ function Header() {
               {isAuthenticated ? (
                 <Navbar.Text onClick={handleLogout} className="clinic-user-chip">
                   <span>
-                    Welcome, {profile?.role} {profile?.first_name} {profile?.last_name}
+                    Welcome, {profile?.role_display} {profile?.first_name} {profile?.last_name}
                   </span>
                   <RiLogoutCircleRLine />
                 </Navbar.Text>

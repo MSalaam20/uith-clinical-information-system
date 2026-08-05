@@ -1,25 +1,26 @@
 from datetime import timedelta
 import os
 from pathlib import Path
-from decouple import config
-import logging.config
+from decouple import Csv, config
 
-logging.config.fileConfig('logging.conf')
-logger = logging.getLogger('sampleLogger')
+
+def env_bool(name, default=False):
+    value = config(name, default=str(default))
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'debug.log',
+        'console': {
+            'class': 'logging.StreamHandler',
         },
     },
     'root': {
-        'handlers': ['file'],
-        'level': 'DEBUG',
-    }
+        'handlers': ['console'],
+        'level': config('LOG_LEVEL', default='INFO'),
+    },
 }
 
 
@@ -28,12 +29,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-y0g=qa*!&s5kk)isk)nfb*3a5-+rh0n-v&+hiu#u$&c9vi9gc2w(y='
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='unsafe-development-only-key-not-for-production-2026-change-me-now',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool('DJANGO_DEBUG', default=True)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1',
+    cast=Csv(),
+)
 
 
 # Application definition
@@ -58,17 +66,21 @@ INSTALLED_APPS = [
     'organization',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://localhost:8000',
+    cast=Csv(),
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_ALL_ORIGINS = False
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-]
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:3000,http://localhost:8000',
+    cast=Csv(),
+)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -101,7 +113,7 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # 'rest_framework.authentication.TokenAuthentication',
@@ -112,13 +124,38 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': config('API_ANON_RATE', default='30/hour'),
+        'user': config('API_USER_RATE', default='2000/day'),
+    },
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Use: Bearer <access-token>',
+        }
+    },
 }
 
 SIMPLE_JWT = {
    'AUTH_HEADER_TYPES': ('Bearer',),
-   "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-   "REFRESH_TOKEN_LIFETIME": timedelta(days=10),
+   'ACCESS_TOKEN_LIFETIME': timedelta(
+       minutes=config('JWT_ACCESS_MINUTES', default=30, cast=int)
+   ),
+   'REFRESH_TOKEN_LIFETIME': timedelta(
+       days=config('JWT_REFRESH_DAYS', default=1, cast=int)
+   ),
+   'ROTATE_REFRESH_TOKENS': True,
+   'BLACKLIST_AFTER_ROTATION': False,
 }
 
 
@@ -130,16 +167,32 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('MYSQL_DATABASE', default='uith_ehr_db'),
-        'USER': config('MYSQL_USER', default='root'),
-        'PASSWORD': config('MYSQL_PASSWORD', default=''),
-        'HOST': config('MYSQL_HOST', default='localhost'),
-        'PORT': config('MYSQL_PORT', default='3306'),
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.mysql'),
+        'NAME': config(
+            'DB_NAME',
+            default=config('MYSQL_DATABASE', default='uith_ehr_db'),
+        ),
+        'USER': config(
+            'DB_USER',
+            default=config('MYSQL_USER', default='root'),
+        ),
+        'PASSWORD': config(
+            'DB_PASSWORD',
+            default=config('MYSQL_PASSWORD', default=''),
+        ),
+        'HOST': config(
+            'DB_HOST',
+            default=config('MYSQL_HOST', default='127.0.0.1'),
+        ),
+        'PORT': config(
+            'DB_PORT',
+            default=config('MYSQL_PORT', default='3306'),
+        ),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),
     }
 }
 
@@ -167,7 +220,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = config('TIME_ZONE', default='Africa/Lagos')
 
 USE_I18N = True
 
@@ -189,3 +242,22 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = config(
+    'DATA_UPLOAD_MAX_MEMORY_SIZE', default=10 * 1024 * 1024, cast=int
+)
+FILE_UPLOAD_MAX_MEMORY_SIZE = config(
+    'FILE_UPLOAD_MAX_MEMORY_SIZE', default=5 * 1024 * 1024, cast=int
+)
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', default=False)
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    'SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False
+)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', default=False)
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', default=False)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', default=False)
