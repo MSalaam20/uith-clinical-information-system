@@ -21,6 +21,24 @@ from .models import (
 )
 
 
+CLINICAL_NOTE_TYPES = (
+    ('doctor', 'Doctor note'),
+    ('nursing', 'Nursing note'),
+    ('progress', 'Progress note'),
+    ('observation', 'Observation'),
+    ('discharge', 'Discharge summary'),
+)
+
+
+def validate_open_visit(attrs, instance=None):
+    visit = attrs.get('visit', getattr(instance, 'visit', None))
+    if visit and visit.status != Visit.Status.OPEN:
+        raise serializers.ValidationError({
+            'visit': 'Clinical entries can be changed only while the visit is open.'
+        })
+    return visit
+
+
 def validate_findings_against_schema(findings, schema):
     if schema is None:
         return
@@ -155,10 +173,15 @@ class VitalSignSerializer(serializers.ModelSerializer):
         return round(float(vital_sign.weight_kg) / (height_m * height_m), 1)
 
     def validate(self, attrs):
+        validate_open_visit(attrs, self.instance)
         systolic = attrs.get('systolic_bp')
         diastolic = attrs.get('diastolic_bp')
         oxygen = attrs.get('oxygen_saturation')
         temperature = attrs.get('temperature_c')
+        pulse = attrs.get('pulse_bpm')
+        respiratory_rate = attrs.get('respiratory_rate')
+        weight = attrs.get('weight_kg')
+        height = attrs.get('height_cm')
         if systolic is not None and not 50 <= systolic <= 260:
             raise serializers.ValidationError({'systolic_bp': 'Expected 50-260 mmHg.'})
         if diastolic is not None and not 30 <= diastolic <= 160:
@@ -169,11 +192,25 @@ class VitalSignSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'oxygen_saturation': 'Expected 50-100%.'})
         if temperature is not None and not 25 <= temperature <= 45:
             raise serializers.ValidationError({'temperature_c': 'Expected 25-45 C.'})
+        if pulse is not None and not 20 <= pulse <= 260:
+            raise serializers.ValidationError({'pulse_bpm': 'Expected 20-260 bpm.'})
+        if respiratory_rate is not None and not 5 <= respiratory_rate <= 80:
+            raise serializers.ValidationError({
+                'respiratory_rate': 'Expected 5-80 breaths per minute.'
+            })
+        if weight is not None and not 1 <= weight <= 500:
+            raise serializers.ValidationError({'weight_kg': 'Expected 1-500 kg.'})
+        if height is not None and not 20 <= height <= 260:
+            raise serializers.ValidationError({'height_cm': 'Expected 20-260 cm.'})
         return attrs
 
 
 class ClinicalNoteSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
+    note_type = serializers.ChoiceField(
+        choices=CLINICAL_NOTE_TYPES, required=False, default='progress'
+    )
+    note = serializers.CharField(max_length=5000)
 
     class Meta:
         model = ClinicalNote
@@ -184,6 +221,10 @@ class ClinicalNoteSerializer(serializers.ModelSerializer):
 
     def get_author_name(self, note):
         return profile_display_name(note.author)
+
+    def validate(self, attrs):
+        validate_open_visit(attrs, self.instance)
+        return attrs
 
 
 class ICDCodeSerializer(serializers.ModelSerializer):
@@ -207,6 +248,10 @@ class DiagnosisSerializer(serializers.ModelSerializer):
     def get_diagnosed_by_name(self, diagnosis):
         return profile_display_name(diagnosis.diagnosed_by)
 
+    def validate(self, attrs):
+        validate_open_visit(attrs, self.instance)
+        return attrs
+
     def create(self, validated_data):
         icd_code = validated_data.get('icd_code')
         if icd_code:
@@ -225,11 +270,14 @@ class MedicationSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate(self, attrs):
+        for field in ('name', 'generic_name', 'strength', 'form'):
+            if field in attrs:
+                attrs[field] = attrs[field].strip()
         name = attrs.get('name', getattr(self.instance, 'name', ''))
         strength = attrs.get('strength', getattr(self.instance, 'strength', ''))
         form = attrs.get('form', getattr(self.instance, 'form', ''))
         duplicates = Medication.objects.filter(
-            name=name, strength=strength, form=form
+            name__iexact=name, strength__iexact=strength, form__iexact=form
         )
         if self.instance:
             duplicates = duplicates.exclude(pk=self.instance.pk)
@@ -270,6 +318,7 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'visit': 'The selected visit belongs to a different patient.'}
             )
+        validate_open_visit(attrs, self.instance)
         if self.instance is None and not attrs.get('items'):
             raise serializers.ValidationError({
                 'items': 'Add at least one valid prescription item.'
@@ -322,6 +371,10 @@ class VisitSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        if self.instance and self.instance.status != Visit.Status.OPEN:
+            raise serializers.ValidationError({
+                'status': 'Completed or cancelled visits cannot be edited.'
+            })
         patient = attrs.get('patient', getattr(self.instance, 'patient', None))
         appointment = attrs.get(
             'appointment', getattr(self.instance, 'appointment', None)

@@ -191,7 +191,7 @@ EMAIL_BACKEND = config(
 )
 DEFAULT_FROM_EMAIL = config(
     'DJANGO_DEFAULT_FROM_EMAIL',
-    default='no-reply@school-clinic.local',
+    default=config('DEFAULT_FROM_EMAIL', default='no-reply@school-clinic.local'),
 )
 FRONTEND_URL = config('FRONTEND_URL', default='http://127.0.0.1:3001')
 SHOW_DEMO_CREDENTIALS = env_bool('SHOW_DEMO_CREDENTIALS', default=False)

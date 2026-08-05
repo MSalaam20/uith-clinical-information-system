@@ -6,14 +6,27 @@ SENSITIVE_METADATA_KEYS = {
 }
 
 
+def _is_sensitive_key(key):
+    normalized = str(key).lower()
+    return any(sensitive in normalized for sensitive in SENSITIVE_METADATA_KEYS)
+
+
+def _sanitize_value(value):
+    if isinstance(value, dict):
+        return {
+            str(key): _sanitize_value(item)
+            for key, item in value.items()
+            if not _is_sensitive_key(key)
+        }
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_value(item) for item in value]
+    return value
+
+
 def _safe_metadata(metadata):
     if not isinstance(metadata, dict):
         return {}
-    return {
-        str(key): value
-        for key, value in metadata.items()
-        if str(key).lower() not in SENSITIVE_METADATA_KEYS
-    }
+    return _sanitize_value(metadata)
 
 
 def log_action(

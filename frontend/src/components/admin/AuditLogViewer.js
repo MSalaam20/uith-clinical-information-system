@@ -11,10 +11,11 @@ import { AdminPagination } from "./StaffManagement";
 import "./AdminWorkspace.css";
 
 const sensitiveKeys = ["password", "token", "access", "refresh", "secret", "authorization"];
+const isSensitiveKey = (key) => sensitiveKeys.some((sensitive) => key.toLowerCase().includes(sensitive));
 const safeMetadata = (value) => {
   if (Array.isArray(value)) return value.map(safeMetadata);
   if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !sensitiveKeys.includes(key.toLowerCase())).map(([key, item]) => [key, safeMetadata(item)]));
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !isSensitiveKey(key)).map(([key, item]) => [key, safeMetadata(item)]));
 };
 
 export default function AuditLogViewer() {

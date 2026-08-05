@@ -43,3 +43,10 @@ test("patient workspace renders a clear unavailable state", () => {
   expect(screen.getByRole("heading", { name: /patient unavailable/i })).toBeInTheDocument();
   expect(screen.getByText("Patient not found.")).toBeInTheDocument();
 });
+
+test("patient workspace reports a clinical-history API failure with retry", async () => {
+  clinicalApi.getPatientWorkspace.mockRejectedValue(new Error("offline"));
+  renderWorkspace({ patient: { id: 7, first_name: "Error", middle_name: "", last_name: "Case", uuid: "error-uuid", gender: "M", date_of_birth: "2000-01-01", is_active: true }, loadStatus: "succeeded", loadError: null });
+  expect(await screen.findByText(/clinical history could not be loaded/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+});

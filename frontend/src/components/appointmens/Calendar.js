@@ -111,7 +111,7 @@ export default function Calendar() {
       const payload = { ...form, scheduled_for: new Date(form.scheduled_for).toISOString() };
       delete payload.id;
       if (form.id) await clinicalApi.updateAppointment(form.id, payload);
-      else await apiFetch(APPOINTMENTS, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      else await clinicalApi.createAppointment(payload);
       setForm(null);
       await loadRange(visibleRange);
     } catch (requestError) {

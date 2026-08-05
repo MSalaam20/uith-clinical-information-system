@@ -96,12 +96,12 @@ export function VitalSignForm({ visit, onSaved, onCancel }) {
   );
 }
 
-export function ClinicalNoteForm({ visit, onSaved, onCancel }) {
+export function ClinicalNoteForm({ visit, note: existingNote, onSaved, onCancel }) {
   const [form, setForm] = useState({
     visit: visit.id,
-    note_type: "progress",
-    note: "",
-    patient_visible: false,
+    note_type: existingNote?.note_type || "progress",
+    note: existingNote?.note || "",
+    patient_visible: existingNote?.patient_visible || false,
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -111,7 +111,8 @@ export function ClinicalNoteForm({ visit, onSaved, onCancel }) {
     setSaving(true);
     setError("");
     try {
-      await clinicalApi.createClinicalNote(form);
+      if (existingNote) await clinicalApi.updateClinicalNote(existingNote.id, form);
+      else await clinicalApi.createClinicalNote(form);
       onSaved();
     } catch (requestError) {
       setError(apiError(requestError, "The clinical note could not be saved.").message);
@@ -121,7 +122,7 @@ export function ClinicalNoteForm({ visit, onSaved, onCancel }) {
   };
 
   return (
-    <Form onSubmit={submit} className="clinical-entry-form" aria-label="Add clinical note">
+    <Form onSubmit={submit} className="clinical-entry-form" aria-label={existingNote ? "Edit clinical note" : "Add clinical note"}>
       <FormError error={error} />
       <Form.Group className="mb-3" controlId="clinical-note-type">
         <Form.Label>Note type</Form.Label>
@@ -144,16 +145,19 @@ export function ClinicalNoteForm({ visit, onSaved, onCancel }) {
         checked={form.patient_visible}
         onChange={(event) => setForm({ ...form, patient_visible: event.target.checked })}
       />
-      <FormActions saving={saving} onCancel={onCancel} label="Save note" />
+      <FormActions saving={saving} onCancel={onCancel} label={existingNote ? "Update note" : "Save note"} />
     </Form>
   );
 }
 
-export function DiagnosisForm({ visit, onSaved, onCancel }) {
+export function DiagnosisForm({ visit, diagnosis: existingDiagnosis, onSaved, onCancel }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ diagnosis_type: "confirmed", description: "" });
+  const [selected, setSelected] = useState(existingDiagnosis?.icd || null);
+  const [form, setForm] = useState({
+    diagnosis_type: existingDiagnosis?.diagnosis_type || "confirmed",
+    description: existingDiagnosis?.description || "",
+  });
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -198,12 +202,14 @@ export function DiagnosisForm({ visit, onSaved, onCancel }) {
     setSaving(true);
     setError("");
     try {
-      await clinicalApi.createDiagnosis({
+      const payload = {
         visit: visit.id,
         icd_code: selected.id,
         diagnosis_type: form.diagnosis_type,
         description: form.description,
-      });
+      };
+      if (existingDiagnosis) await clinicalApi.updateDiagnosis(existingDiagnosis.id, payload);
+      else await clinicalApi.createDiagnosis(payload);
       onSaved();
     } catch (requestError) {
       setError(apiError(requestError, "The diagnosis could not be saved.").message);
@@ -213,7 +219,7 @@ export function DiagnosisForm({ visit, onSaved, onCancel }) {
   };
 
   return (
-    <Form onSubmit={submit} className="clinical-entry-form" aria-label="Add diagnosis">
+    <Form onSubmit={submit} className="clinical-entry-form" aria-label={existingDiagnosis ? "Edit diagnosis" : "Add diagnosis"}>
       <FormError error={error} />
       <div className="icd-search-box">
         <Form.Label htmlFor="diagnosis-code-search">ICD-11 code or diagnosis</Form.Label>
@@ -243,7 +249,7 @@ export function DiagnosisForm({ visit, onSaved, onCancel }) {
         <Form.Label>Description</Form.Label>
         <Form.Control as="textarea" rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength={500} required />
       </Form.Group>
-      <FormActions saving={saving} onCancel={onCancel} label="Save diagnosis" />
+      <FormActions saving={saving} onCancel={onCancel} label={existingDiagnosis ? "Update diagnosis" : "Save diagnosis"} />
     </Form>
   );
 }

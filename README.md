@@ -40,6 +40,7 @@ EHR/
 |   |-- public/
 |   `-- src/                 API, Redux slices, routes and UI components
 |-- infra/                   Docker Compose, Nginx and environment example
+|-- API_WORKFLOW_MAP.md      API, role and React consumer mapping
 |-- dfd.drawio               Data-flow diagram source
 `-- use case.png             Use-case diagram
 ```
@@ -258,13 +259,18 @@ Swagger:
    appointments and custom records in separate tabs.
 4. Create or edit an open visit and optionally link an appointment.
 5. Record validated vital signs; BMI is calculated by the backend.
-6. Add an authored clinical or nursing note and explicitly choose whether it is
-   visible in the student portal.
-7. Search the curated ICD-11 subset and add an ICD-linked diagnosis.
-8. Search or create a medication presentation and create an atomic prescription
+6. Add or author-correct a clinical or nursing note and explicitly choose
+   whether it is visible in the student portal.
+7. Search the curated ICD-11 subset, add an ICD-linked diagnosis and use its
+   audited correction controls while the visit remains open.
+8. Search, create or edit a medication presentation and create an atomic prescription
    containing one or more items.
 9. Complete the visit and view the complete history.
 10. Manage calendar appointments according to role.
+
+Completed and cancelled visits are read-only through both React controls and
+backend serializers. See `API_WORKFLOW_MAP.md` for the endpoint, role and
+frontend-consumer mapping.
 
 Administrators additionally have `/staff` and `/audit-logs` workspaces. Students
 are automatically routed to their linked patient and cannot retrieve another
@@ -323,10 +329,11 @@ npm.cmd test
 npm.cmd run build
 ```
 
-Latest verified local result (5 August 2026): Django found 61 tests and all 61
-passed in 250.879 seconds; Jest ran 26 tests across 11 suites and all 26
-passed in 22.673 seconds. The route-split React build completed successfully
-with a 130.49 kB initial JavaScript bundle and 38.25 kB main CSS bundle after
+Latest verified local result (5 August 2026): Django found 68 tests and all 68
+passed in 393.527 seconds; Jest ran 37 tests across 16 suites and all 37
+passed in 34.985 seconds. A clean `npm.cmd ci` and top-level dependency check
+also succeeded. The route-split React build completed successfully with a
+130.58 kB initial JavaScript bundle and 38.25 kB main CSS bundle after
 gzip; operational routes are emitted as on-demand chunks. React Router future-flag
 notices occur in its test harness, and the older CRA toolchain emits a Node
 `fs.F_OK` deprecation notice; neither prevented testing or compilation.
@@ -354,8 +361,9 @@ docker compose build
   administrator and a reason. Permanent API deletion remains administrator-only.
 - Embedded record images are restricted to JPEG, PNG and WebP, limited to 5 MB,
   assigned generated names and constrained to their record directory.
-- Audit metadata excludes common password, token and secret keys. Audit records
-  are read-only through the API and Django administration.
+- Audit metadata recursively excludes password, token, authorization and secret
+  keys, including nested objects and arrays. Audit records are read-only through
+  the API and Django administration.
 - Multi-item prescriptions are validated before persistence and created inside
   a database transaction. A failed item cannot leave a partial prescription.
 - Clinical notes default to staff-only and must be explicitly marked patient

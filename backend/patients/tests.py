@@ -116,7 +116,7 @@ class PatientWorkflowTests(APITestCase):
             last_name='Patient',
             date_of_birth='2000-01-01',
         )
-        Appointment.objects.create(
+        other_appointment = Appointment.objects.create(
             patient=other,
             scheduled_for=timezone.now() + timedelta(days=2),
             reason='Other review',
@@ -126,6 +126,11 @@ class PatientWorkflowTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['id'], own.id)
+
+        other_detail = self.client.get(
+            f'/api/appointments/{other_appointment.id}/'
+        )
+        self.assertEqual(other_detail.status_code, status.HTTP_404_NOT_FOUND)
 
         cancel_response = self.client.post(f'/api/appointments/{own.id}/cancel/')
         self.assertEqual(cancel_response.status_code, status.HTTP_403_FORBIDDEN)

@@ -7,7 +7,9 @@ jest.mock("../../api/clinicalApi", () => ({
   clinicalApi: {
     createVitalSign: jest.fn(),
     createClinicalNote: jest.fn(),
+    updateClinicalNote: jest.fn(),
     createDiagnosis: jest.fn(),
+    updateDiagnosis: jest.fn(),
     listIcdCodes: jest.fn(),
   },
   apiError: (error, fallback) => ({ message: fallback, fields: {} }),
@@ -37,6 +39,18 @@ test("clinical-note form submits patient visibility", async () => {
   await waitFor(() => expect(onSaved).toHaveBeenCalled());
 });
 
+test("clinical-note form updates an existing author-owned note", async () => {
+  clinicalApi.updateClinicalNote.mockResolvedValue({ id: 9 });
+  const onSaved = jest.fn();
+  const note = { id: 9, note_type: "nursing", note: "Initial observation", patient_visible: false };
+  render(<ClinicalNoteForm visit={visit} note={note} onSaved={onSaved} onCancel={jest.fn()} />);
+  fireEvent.change(screen.getByLabelText("Clinical note"), { target: { value: "Updated observation" } });
+  fireEvent.click(screen.getByRole("button", { name: /update note/i }));
+  await waitFor(() => expect(clinicalApi.updateClinicalNote).toHaveBeenCalledWith(9, expect.objectContaining({ note: "Updated observation", visit: 12 })));
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(clinicalApi.createClinicalNote).not.toHaveBeenCalled();
+});
+
 test("diagnosis form searches, selects and submits an ICD-11 code", async () => {
   jest.useFakeTimers();
   clinicalApi.listIcdCodes.mockResolvedValue({ items: [{ id: 4, code: "BA00", title: "Essential hypertension" }] });
@@ -51,4 +65,21 @@ test("diagnosis form searches, selects and submits an ICD-11 code", async () => 
   await waitFor(() => expect(clinicalApi.createDiagnosis).toHaveBeenCalledWith(expect.objectContaining({ visit: 12, icd_code: 4, diagnosis_type: "confirmed" })));
   await waitFor(() => expect(onSaved).toHaveBeenCalled());
   jest.useRealTimers();
+});
+
+test("diagnosis form corrects an existing ICD-linked diagnosis", async () => {
+  clinicalApi.updateDiagnosis.mockResolvedValue({ id: 8 });
+  const existing = {
+    id: 8,
+    diagnosis_type: "provisional",
+    description: "Possible hypertension",
+    icd: { id: 4, code: "BA00", title: "Essential hypertension" },
+  };
+  const onSaved = jest.fn();
+  render(<DiagnosisForm visit={visit} diagnosis={existing} onSaved={onSaved} onCancel={jest.fn()} />);
+  fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Confirmed hypertension" } });
+  fireEvent.click(screen.getByRole("button", { name: /update diagnosis/i }));
+  await waitFor(() => expect(clinicalApi.updateDiagnosis).toHaveBeenCalledWith(8, expect.objectContaining({ icd_code: 4, description: "Confirmed hypertension" })));
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(clinicalApi.createDiagnosis).not.toHaveBeenCalled();
 });

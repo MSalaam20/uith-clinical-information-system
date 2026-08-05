@@ -7,6 +7,7 @@ jest.mock("../../api/clinicalApi", () => ({
   clinicalApi: {
     listMedications: jest.fn(),
     createMedication: jest.fn(),
+    updateMedication: jest.fn(),
     createPrescription: jest.fn(),
   },
   apiError: (error, fallback) => ({ message: fallback, fields: {} }),
@@ -45,4 +46,16 @@ test("prescription form prevents submission without an item", async () => {
   await screen.findByRole("option", { name: /Paracetamol/i });
   expect(screen.getByRole("button", { name: /save prescription/i })).toBeDisabled();
   expect(clinicalApi.createPrescription).not.toHaveBeenCalled();
+});
+
+test("authorized prescriber can update a selected medication presentation", async () => {
+  clinicalApi.updateMedication.mockResolvedValue({ id: 3, name: "Paracetamol", generic_name: "Acetaminophen", strength: "650 mg", form: "tablet" });
+  render(<PrescriptionForm patient={patient} visit={visit} onSaved={jest.fn()} onCancel={jest.fn()} />);
+  await screen.findByRole("option", { name: /Paracetamol/i });
+  fireEvent.change(screen.getByLabelText("Medication"), { target: { value: "3" } });
+  fireEvent.click(screen.getByRole("button", { name: /edit selected/i }));
+  fireEvent.change(screen.getByLabelText("Strength"), { target: { value: "650 mg" } });
+  fireEvent.click(screen.getByRole("button", { name: /update medication/i }));
+  await waitFor(() => expect(clinicalApi.updateMedication).toHaveBeenCalledWith(3, expect.objectContaining({ strength: "650 mg" })));
+  await waitFor(() => expect(screen.queryByText("Edit medication presentation")).not.toBeInTheDocument());
 });

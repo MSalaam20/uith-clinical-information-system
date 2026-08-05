@@ -33,7 +33,10 @@ def _matches_file_signature(mime_type, content):
 
 def _safe_path(directory, filename):
     base_path = Path(directory).resolve()
-    candidate = (base_path / Path(filename).name).resolve()
+    supplied_path = Path(filename)
+    if supplied_path.is_absolute() or supplied_path.name != str(filename):
+        raise ValidationError('Unsafe file path.')
+    candidate = (base_path / supplied_path.name).resolve()
     if candidate.parent != base_path:
         raise ValidationError('Unsafe file path.')
     return candidate

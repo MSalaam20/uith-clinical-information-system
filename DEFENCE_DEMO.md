@@ -20,12 +20,14 @@ administrator password is supplied by the project.
 6. Create a clinic visit with a chief complaint and initial summary.
 7. Record temperature, blood pressure, pulse, oxygen saturation, height and
    weight; show the calculated BMI.
-8. Add a clinical note and explain the patient-visible switch.
-9. Search the curated ICD-11 subset, select a code and save the diagnosis.
-10. Create or select a synthetic medication, add two prescription items and
+8. Add a clinical note, explain the patient-visible switch and show that only
+   its author or an administrator receives the edit control.
+9. Search the curated ICD-11 subset, select a code, save the diagnosis and point
+   out the audited correction controls available before visit completion.
+10. Create, select or edit a synthetic medication, add two prescription items and
     save the transaction. Show the items in patient history.
-11. Complete the visit and show its combined vitals, notes, diagnoses and
-    prescription.
+11. Complete the visit, show its combined vitals, notes, diagnoses and
+    prescription, then explain that completed visits are read-only.
 12. Create an appointment, open it from the calendar and demonstrate a permitted
     status change.
 13. Sign out, sign in as a student, and show that only the linked patient and

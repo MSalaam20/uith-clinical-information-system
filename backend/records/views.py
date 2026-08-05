@@ -7,7 +7,7 @@ from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -253,6 +253,13 @@ class PatientOwnedClinicalViewSet(viewsets.ModelViewSet):
         self.audit(instance, 'updated')
 
     def perform_destroy(self, instance):
+        visit = instance if isinstance(instance, Visit) else getattr(
+            instance, 'visit', None
+        )
+        if visit and visit.status != Visit.Status.OPEN:
+            raise ValidationError({
+                'visit': 'Clinical entries can be removed only while the visit is open.'
+            })
         model_name = instance.__class__.__name__
         resource_id = instance.pk
         instance.delete()

@@ -149,6 +149,8 @@
 .clinical-history-list li { border-bottom: 1px solid #e3e8e5; padding: 0.65rem 0; }
 .clinical-history-list li:last-child { border-bottom: 0; }
 .clinical-history-list strong { color: #2d3933; display: block; font-size: 0.88rem; }
+.clinical-entry-heading { align-items: flex-start; display: flex; gap: 0.5rem; justify-content: space-between; }
+.clinical-history-list .clinical-entry-actions { display: inline-flex; flex: 0 0 auto; gap: 0.15rem; margin: -0.35rem 0; }
 .clinical-history-list span { color: #748078; display: block; font-size: 0.73rem; margin-top: 0.2rem; }
 .clinical-history-list p { color: #3c4842; margin: 0.25rem 0; white-space: pre-wrap; }
 .clinical-history-list.standalone { max-width: 900px; }
@@ -183,6 +185,7 @@
 .prescription-context div { display: grid; }
 .prescription-context span { color: #6b7770; font-size: 0.78rem; }
 .medication-search-row { align-items: end; display: grid; gap: 0.75rem; grid-template-columns: 1fr auto; }
+.medication-catalogue-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .inline-medication-form, .prescription-item-editor { border: 1px solid #dce3df; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
 .inline-medication-form legend, .prescription-item-editor legend { color: #35423b; float: none; font-size: 0.9rem; font-weight: 800; padding: 0 0.25rem; width: auto; }
 

@@ -58,6 +58,20 @@ const retrieve = async (endpoint, id) => {
   return response.data;
 };
 
+const remove = async (endpoint, id) => {
+  await apiClient.delete(`${endpoint}${id}/`);
+};
+
+const errorText = (value) => {
+  if (Array.isArray(value)) return value.map(errorText).filter(Boolean).join(" ");
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, item]) => `${key}: ${errorText(item)}`)
+      .join(" ");
+  }
+  return String(value ?? "");
+};
+
 export const apiError = (error, fallback = "The request could not be completed.") => {
   const data = error.response?.data;
   if (typeof data === "string") return { message: data, fields: {} };
@@ -66,7 +80,7 @@ export const apiError = (error, fallback = "The request could not be completed."
   }
   const fields = {};
   Object.entries(data).forEach(([key, value]) => {
-    fields[key] = Array.isArray(value) ? value.join(" ") : String(value);
+    fields[key] = errorText(value);
   });
   return {
     message: fields.detail || fields.non_field_errors || fallback,
@@ -99,6 +113,8 @@ export const clinicalApi = {
   createClinicalNote: (payload) => create(CLINICAL_NOTES, payload),
   updateClinicalNote: (id, payload) => update(CLINICAL_NOTES, id, payload),
   createDiagnosis: (payload) => create(DIAGNOSES, payload),
+  updateDiagnosis: (id, payload) => update(DIAGNOSES, id, payload),
+  deleteDiagnosis: (id) => remove(DIAGNOSES, id),
   listIcdCodes: (search = "") => list(ICD_CODES, {
     search,
     page_size: 50,
@@ -111,6 +127,7 @@ export const clinicalApi = {
     ordering: "name",
   }),
   createMedication: (payload) => create(MEDICATIONS, payload),
+  updateMedication: (id, payload) => update(MEDICATIONS, id, payload),
   createPrescription: (payload) => create(PRESCRIPTIONS, payload),
   listSchemas: () => list(SCHEMAS, { page_size: 100 }),
   getSchema: (id) => retrieve(SCHEMAS, id),
@@ -120,6 +137,7 @@ export const clinicalApi = {
   }),
   getTemplate: (id) => retrieve(TEMPLATES, id),
   createLegacyRecord: (payload) => create(RECORDS, payload),
+  createAppointment: (payload) => create(APPOINTMENTS, payload),
   updateAppointment: (id, payload) => update(APPOINTMENTS, id, payload),
   updateAppointmentStatus: async (id, status) => {
     const response = await apiClient.patch(`${APPOINTMENTS}${id}/status/`, { status });

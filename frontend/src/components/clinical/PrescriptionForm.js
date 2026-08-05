@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
-import { RiAddLine, RiCloseLine, RiDeleteBinLine, RiMedicineBottleLine } from "react-icons/ri";
+import { RiAddLine, RiCloseLine, RiDeleteBinLine, RiEdit2Line, RiMedicineBottleLine } from "react-icons/ri";
 import { apiError, clinicalApi } from "../../api/clinicalApi";
 
 const emptyItem = {
@@ -24,6 +24,7 @@ export default function PrescriptionForm({ patient, visit, onSaved, onCancel }) 
   const [items, setItems] = useState([]);
   const [notes, setNotes] = useState("");
   const [newMedication, setNewMedication] = useState(emptyMedication);
+  const [editingMedicationId, setEditingMedicationId] = useState(null);
   const [showMedicationForm, setShowMedicationForm] = useState(false);
   const [loadingMedications, setLoadingMedications] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,19 +71,54 @@ export default function PrescriptionForm({ patient, visit, onSaved, onCancel }) 
     setError("");
   };
 
-  const createMedication = async (event) => {
+  const saveMedication = async (event) => {
     event.preventDefault();
     setError("");
     try {
-      const created = await clinicalApi.createMedication(newMedication);
-      setMedications((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setItem({ ...item, medication: String(created.id) });
+      const saved = editingMedicationId
+        ? await clinicalApi.updateMedication(editingMedicationId, newMedication)
+        : await clinicalApi.createMedication(newMedication);
+      setMedications((current) => {
+        const withoutSaved = current.filter((medication) => medication.id !== saved.id);
+        return [...withoutSaved, saved].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setItem({ ...item, medication: String(saved.id) });
       setNewMedication(emptyMedication);
+      setEditingMedicationId(null);
       setShowMedicationForm(false);
     } catch (requestError) {
       const parsed = apiError(requestError, "Medication could not be created.");
       setError(parsed.fields.non_field_errors || parsed.message);
     }
+  };
+
+  const startNewMedication = () => {
+    setEditingMedicationId(null);
+    setNewMedication(emptyMedication);
+    setShowMedicationForm(true);
+  };
+
+  const startMedicationEdit = () => {
+    const selectedMedication = medicationById[String(item.medication)];
+    if (!selectedMedication) {
+      setError("Select a medication presentation before editing it.");
+      return;
+    }
+    setEditingMedicationId(selectedMedication.id);
+    setNewMedication({
+      name: selectedMedication.name || "",
+      generic_name: selectedMedication.generic_name || "",
+      strength: selectedMedication.strength || "",
+      form: selectedMedication.form || "",
+    });
+    setShowMedicationForm(true);
+    setError("");
+  };
+
+  const closeMedicationForm = () => {
+    setShowMedicationForm(false);
+    setEditingMedicationId(null);
+    setNewMedication(emptyMedication);
   };
 
   const submit = async (event) => {
@@ -125,14 +161,15 @@ export default function PrescriptionForm({ patient, visit, onSaved, onCancel }) 
           <Form.Label>Search medication catalogue</Form.Label>
           <Form.Control value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Brand, generic name, strength or form" />
         </Form.Group>
-        <Button type="button" variant="outline-primary" onClick={() => setShowMedicationForm(!showMedicationForm)}>
-          <RiAddLine /> New medication
-        </Button>
+        <div className="medication-catalogue-actions">
+          <Button type="button" variant="outline-primary" onClick={startNewMedication}><RiAddLine /> New medication</Button>
+          <Button type="button" variant="outline-secondary" onClick={startMedicationEdit} disabled={!item.medication}><RiEdit2Line /> Edit selected</Button>
+        </div>
       </div>
 
       {showMedicationForm && (
         <fieldset className="inline-medication-form">
-          <legend>Add medication presentation</legend>
+          <legend>{editingMedicationId ? "Edit medication presentation" : "Add medication presentation"}</legend>
           <div className="clinical-form-grid">
             {[
               ["name", "Name", true],
@@ -147,8 +184,8 @@ export default function PrescriptionForm({ patient, visit, onSaved, onCancel }) 
             ))}
           </div>
           <div className="clinical-form-actions">
-            <Button type="button" variant="outline-secondary" onClick={() => setShowMedicationForm(false)}>Cancel</Button>
-            <Button type="button" onClick={createMedication}>Save medication</Button>
+            <Button type="button" variant="outline-secondary" onClick={closeMedicationForm}>Cancel</Button>
+            <Button type="button" onClick={saveMedication}>{editingMedicationId ? "Update medication" : "Save medication"}</Button>
           </div>
         </fieldset>
       )}
