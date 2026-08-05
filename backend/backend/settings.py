@@ -82,7 +82,12 @@ CORS_ALLOWED_ORIGINS = config(
     'DJANGO_CORS_ALLOWED_ORIGINS',
     default=config(
         'CORS_ALLOWED_ORIGINS',
-        default='http://localhost:3000,http://localhost:8000',
+        default=(
+            'http://localhost:3000,http://127.0.0.1:3000,'
+            'http://localhost:3001,http://127.0.0.1:3001,'
+            'http://localhost:8000,http://127.0.0.1:8000,'
+            'http://localhost:8001,http://127.0.0.1:8001'
+        ),
     ),
     cast=Csv(),
 )
@@ -95,7 +100,12 @@ CSRF_TRUSTED_ORIGINS = config(
     'DJANGO_CSRF_TRUSTED_ORIGINS',
     default=config(
         'CSRF_TRUSTED_ORIGINS',
-        default='http://localhost:3000,http://localhost:8000',
+        default=(
+            'http://localhost:3000,http://127.0.0.1:3000,'
+            'http://localhost:3001,http://127.0.0.1:3001,'
+            'http://localhost:8000,http://127.0.0.1:8000,'
+            'http://localhost:8001,http://127.0.0.1:8001'
+        ),
     ),
     cast=Csv(),
 )
@@ -134,8 +144,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'rest_framework.authentication.TokenAuthentication',
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.authentication.ClinicJWTAuthentication',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -175,6 +184,18 @@ SIMPLE_JWT = {
    'ROTATE_REFRESH_TOKENS': True,
    'BLACKLIST_AFTER_ROTATION': False,
 }
+
+EMAIL_BACKEND = config(
+    'DJANGO_EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = config(
+    'DJANGO_DEFAULT_FROM_EMAIL',
+    default='no-reply@school-clinic.local',
+)
+FRONTEND_URL = config('FRONTEND_URL', default='http://127.0.0.1:3001')
+SHOW_DEMO_CREDENTIALS = env_bool('SHOW_DEMO_CREDENTIALS', default=False)
+ALLOW_DEMO_ACCOUNTS = env_bool('ALLOW_DEMO_ACCOUNTS', default=False)
 
 
 WSGI_APPLICATION = 'backend.wsgi.application'

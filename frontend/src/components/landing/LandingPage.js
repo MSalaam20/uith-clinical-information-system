@@ -1,192 +1,99 @@
-import React from "react";
-import Badge from "react-bootstrap/Badge";
-import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
+import React, { useEffect, useState } from "react";
+import Accordion from "react-bootstrap/Accordion";
+import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
 import {
   RiArrowRightLine,
+  RiCalendarCheckLine,
   RiDatabase2Line,
+  RiFileCopyLine,
+  RiFileShield2Line,
   RiHeartPulseLine,
   RiLockPasswordLine,
   RiNurseLine,
-  RiShieldUserLine,
+  RiShieldCheckLine,
   RiStethoscopeLine,
   RiUserHeartLine,
 } from "react-icons/ri";
-import "../dashboard/Dashboard.css";
+import heroImage from "../../assets/clinic-ehr-hero.webp";
+import { clinicalApi } from "../../api/clinicalApi";
+import "./LandingPage.css";
 
-const openLoginPortal = (portalType = "staff") => {
-  window.dispatchEvent(
-    new CustomEvent("uith:open-login", { detail: { portalType } })
-  );
-};
+const openLoginPortal = (portalType) => window.dispatchEvent(
+  new CustomEvent("uith:open-login", { detail: { portalType } })
+);
 
-const rolePortals = [
-  {
-    icon: <RiNurseLine />,
-    portalType: "staff",
-    title: "Clinical Staff Portal",
-    text:
-      "Doctors, Nurses & Receptionists - Access patient management, vitals entry, diagnoses, and ICD-11 coding.",
-  },
-  {
-    icon: <RiUserHeartLine />,
-    portalType: "student",
-    title: "Student Patient Portal",
-    text:
-      "Unilorin Students - Access personal medical records, appointment schedules, and clinical visit summaries.",
-  },
+const capabilities = [
+  [RiUserHeartLine, "Patient continuity", "Linked demographics, appointments, encounters, vitals, notes, diagnoses, prescriptions, and legacy records."],
+  [RiHeartPulseLine, "Clinical documentation", "Role-specific workflows for reception, nursing observations, medical review, and student-facing summaries."],
+  [RiStethoscopeLine, "Structured diagnosis", "A clearly labelled curated ICD-11 demonstration subset supports consistent diagnostic coding."],
+  [RiFileShield2Line, "Accountable access", "Portal separation, role permissions, append-only audit entries, and traceable account administration."],
 ];
 
-const features = [
-  {
-    icon: <RiShieldUserLine />,
-    title: "Role-Based Access Control",
-    text: "Doctor, nurse, receptionist, and student workflows stay safely separated.",
-  },
-  {
-    icon: <RiHeartPulseLine />,
-    title: "Real-Time Vitals",
-    text: "Capture clinic observations and visit summaries with a clean clinical flow.",
-  },
-  {
-    icon: <RiStethoscopeLine />,
-    title: "ICD-11 Diagnostic Integration",
-    text: "Support structured diagnosis lookup for modern clinical documentation.",
-  },
+const workflow = [
+  ["01", "Register", "Reception records a verified student patient profile."],
+  ["02", "Schedule", "Appointments organize the clinic queue and attendance."],
+  ["03", "Document", "Authorized clinicians record visits, vitals, diagnoses, notes, and treatment."],
+  ["04", "Review", "Students see only their linked, patient-visible health information."],
 ];
 
-const demoCredentials = [
-  ["Doctor", "Dr. Jeremiah", "dr.jeremiah", "Doctor@123"],
-  ["Nurse", "Nurse Fatima", "nurse.fatima", "Nurse@123"],
-  ["Receptionist", "Mr. Ibrahim", "mr.ibrahim", "Reception@123"],
-  ["Student", "Amina Sulaiman", "uith_2021_52HL034", "Student@123"],
-];
+export default function LandingPage() {
+  const [demoAccounts, setDemoAccounts] = useState([]);
+  const [copied, setCopied] = useState("");
 
-const LandingPage = () => {
+  useEffect(() => {
+    let active = true;
+    clinicalApi.getDemoAccess()
+      .then((data) => active && setDemoAccounts(data.accounts || []))
+      .catch(() => active && setDemoAccounts([]));
+    return () => { active = false; };
+  }, []);
+
+  const copy = async (value, key) => {
+    await navigator.clipboard.writeText(value);
+    setCopied(key);
+    window.setTimeout(() => setCopied(""), 1400);
+  };
+
   return (
-    <main className="clinical-landing">
-      <Container>
-        <section className="clinical-hero">
-          <Badge className="defense-badge">
-            Academic Defense Prototype - Student: Bello Abdulmumeen Adeboye
-          </Badge>
-
-          <Row className="align-items-center g-4">
-            <Col lg={7}>
-              <p className="hero-kicker">2025/2026 Session | Defense Edition v1.0</p>
-              <h1>
-                University of Ilorin Teaching Hospital (UITH) School Complex
-                Clinic
-              </h1>
-              <p className="hero-subtitle">
-                Integrated Electronic Health Record (EHR) & Clinical Management
-                System
-              </p>
-              <div className="hero-actions">
-                <button
-                  className="primary-portal-button"
-                  onClick={() => openLoginPortal("staff")}
-                >
-                  <RiLockPasswordLine />
-                  Sign In to Staff Portal
-                </button>
-                <span className="hero-assurance">
-                  Secured workflows for clinical staff and Unilorin student
-                  patients.
-                </span>
-              </div>
-            </Col>
-
-            <Col lg={5}>
-              <Card className="hero-status-card">
-                <Card.Body>
-                  <div className="status-icon">
-                    <RiDatabase2Line />
-                  </div>
-                  <h2>Operational EHR Demo</h2>
-                  <p>
-                    Django REST API, MySQL database, seeded UITH clinic data,
-                    JWT authentication, and React presentation UI.
-                  </p>
-                  <div className="status-grid">
-                    <span>MySQL Ready</span>
-                    <span>RBAC Enabled</span>
-                    <span>Seeded Data</span>
-                    <span>Clinical UI</span>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </section>
-
-        <Row className="role-portal-grid g-4">
-          {rolePortals.map((portal) => (
-            <Col md={6} key={portal.title}>
-              <Card
-                className="portal-card h-100"
-                onClick={() => openLoginPortal(portal.portalType)}
-              >
-                <Card.Body>
-                  <div className="portal-icon">{portal.icon}</div>
-                  <h2>{portal.title}</h2>
-                  <p>{portal.text}</p>
-                  <span className="portal-link">
-                    Continue to access <RiArrowRightLine />
-                  </span>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        <Row className="features-grid g-4">
-          {features.map((feature) => (
-            <Col md={4} key={feature.title}>
-              <Card className="feature-card h-100">
-                <Card.Body>
-                  <div className="feature-icon">{feature.icon}</div>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.text}</p>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        <Card className="demo-credentials-card">
-          <Card.Body>
-            <div className="demo-card-header">
-              <div>
-                <span className="demo-eyebrow">1-Click Demo Credentials</span>
-                <h2>Presentation-ready test accounts</h2>
-              </div>
-              <button
-                className="secondary-portal-button"
-                onClick={() => openLoginPortal("staff")}
-              >
-                Open Staff Login
-              </button>
+    <main className="landing-page">
+      <section className="landing-hero" style={{ backgroundImage: `url(${heroImage})` }}>
+        <Container className="landing-hero-inner">
+          <div className="landing-hero-copy">
+            <span className="prototype-label">Academic clinical informatics prototype</span>
+            <h1>UITH School Complex Clinic</h1>
+            <p className="hero-lead">An integrated electronic health record and clinic management system for coordinated student care.</p>
+            <div className="hero-buttons">
+              <Button className="gold-button" onClick={() => openLoginPortal("staff")}><RiLockPasswordLine /> Clinical Staff Portal</Button>
+              <Button variant="outline-light" onClick={() => openLoginPortal("student")}><RiUserHeartLine /> Student Patient Portal</Button>
             </div>
-            <Row className="g-3">
-              {demoCredentials.map(([role, name, username, password]) => (
-                <Col lg={3} md={6} key={username}>
-                  <div className="credential-tile">
-                    <span>{role}</span>
-                    <strong>{name}</strong>
-                    <code>{username}</code>
-                    <small>{password}</small>
-                  </div>
-                </Col>
-              ))}
-            </Row>
-          </Card.Body>
-        </Card>
-      </Container>
+            <div className="hero-trust"><span><RiShieldCheckLine /> Role-aware access</span><span><RiDatabase2Line /> Structured clinical records</span><span><RiCalendarCheckLine /> Appointment workflow</span></div>
+          </div>
+        </Container>
+      </section>
+
+      <section className="landing-intro" id="about">
+        <Container><div className="intro-grid"><div><span className="eyebrow">Purpose-built clinic workflow</span><h2>One record, from front desk to clinical review</h2></div><p>The system preserves the clinic’s existing Django REST and React workflows while making daily tasks easier to scan, safer to administer, and clearer to demonstrate. All visible patient examples are synthetic.</p></div></Container>
+      </section>
+
+      <section className="capability-band" id="capabilities">
+        <Container>
+          <div className="section-title"><span className="eyebrow">Clinical capabilities</span><h2>Focused tools for a working school clinic</h2><p>Operational screens favor legibility, traceability, and repeated use over decorative complexity.</p></div>
+          <div className="capability-grid">{capabilities.map(([Icon, title, text]) => <article key={title}><Icon /><h3>{title}</h3><p>{text}</p></article>)}</div>
+        </Container>
+      </section>
+
+      <section className="workflow-band">
+        <Container><div className="section-title"><span className="eyebrow">Care workflow</span><h2>A traceable path through each clinic interaction</h2></div><ol className="workflow-list">{workflow.map(([number, title, text]) => <li key={number}><span>{number}</span><div><h3>{title}</h3><p>{text}</p></div></li>)}</ol></Container>
+      </section>
+
+      <section className="access-band" id="security">
+        <Container><div className="access-layout"><div className="access-copy"><span className="eyebrow">Secure portal separation</span><h2>Enter through the portal designed for your role</h2><p>Staff accounts are provisioned by clinic administrators. Student accounts are created from verified patient records by administrators or reception staff.</p><div className="security-points"><span><RiShieldCheckLine /> JWT-authenticated sessions</span><span><RiFileShield2Line /> Append-only security audit</span><span><RiLockPasswordLine /> First-login password change</span></div></div><div className="portal-choices"><button onClick={() => openLoginPortal("staff")}><RiNurseLine /><span><strong>Clinical Staff Portal</strong><small>Administrator, doctor, nurse, receptionist, coordinator</small></span><RiArrowRightLine /></button><button onClick={() => openLoginPortal("student")}><RiUserHeartLine /><span><strong>Student Patient Portal</strong><small>Access to the linked personal health record</small></span><RiArrowRightLine /></button></div></div></Container>
+      </section>
+
+      {demoAccounts.length > 0 && <section className="demo-access-band" aria-label="Defence demo access"><Container><Accordion><Accordion.Item eventKey="0"><Accordion.Header>Defence Demo Access: synthetic test accounts</Accordion.Header><Accordion.Body><p>These credentials are enabled for development or academic defence only. They must be removed or changed before a real deployment.</p><div className="demo-account-grid">{demoAccounts.map((account) => <article key={account.username}><span>{account.role}</span><strong>{account.portal === "student" ? "Student Patient Portal" : "Clinical Staff Portal"}</strong><div><code>{account.username}</code><button onClick={() => copy(account.username, `${account.username}-username`)} aria-label={`Copy ${account.role} username`} title="Copy username"><RiFileCopyLine /></button></div><div><code>{account.password}</code><button onClick={() => copy(account.password, `${account.username}-password`)} aria-label={`Copy ${account.role} password`} title="Copy password"><RiFileCopyLine /></button></div>{copied.startsWith(account.username) && <small role="status">Copied</small>}</article>)}</div></Accordion.Body></Accordion.Item></Accordion></Container></section>}
+
+      <footer className="landing-footer"><Container><div><strong>UITH School Complex Clinic EHR</strong><span>Academic defence prototype, 2025/2026 session</span></div><p>Designed and developed by Bello Abdulmumeen Adeboye using Django REST Framework, MariaDB/MySQL, and React.</p></Container></footer>
     </main>
   );
-};
-
-export default LandingPage;
+}

@@ -108,3 +108,7 @@ class CanRecordVitals(ClinicRolePermission):
 
 class CanWriteClinicalNotes(CanRecordVitals):
     pass
+
+
+class CanManageStudentAccounts(ClinicRolePermission):
+    allowed_roles = (Role.ROLE_ADMIN, Role.ROLE_RECEPTIONIST)

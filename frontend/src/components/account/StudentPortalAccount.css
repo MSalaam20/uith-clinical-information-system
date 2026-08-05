@@ -1,0 +1,29 @@
+.student-account-bar {
+  align-items: center;
+  background: #eef5f7;
+  border: 1px solid #cbdde1;
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.student-account-bar > div { align-items: center; display: flex; gap: 0.65rem; min-width: 0; }
+.student-account-bar > div > svg { color: var(--clinical-teal); flex: 0 0 auto; font-size: 1.35rem; }
+.student-account-bar strong, .student-account-bar small { display: block; }
+.student-account-bar strong { font-size: 0.82rem; }
+.student-account-bar small { color: var(--ink-muted); font-size: 0.75rem; margin-top: 0.15rem; overflow-wrap: anywhere; }
+.student-account-error { margin-bottom: 1rem; }
+.student-account-copy { color: var(--ink-muted); font-size: 0.86rem; }
+.student-name-grid { display: grid; gap: 0.75rem; grid-template-columns: 1fr 1fr; }
+.student-account-detail { margin: 0; }
+.student-account-detail div { border-bottom: 1px solid var(--line); display: grid; gap: 0.75rem; grid-template-columns: 130px minmax(0, 1fr); padding: 0.7rem 0; }
+.student-account-detail dt { color: var(--ink-muted); font-size: 0.78rem; }
+.student-account-detail dd { font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 575px) {
+  .student-account-bar { align-items: stretch; flex-direction: column; gap: 0.75rem; }
+  .student-name-grid { grid-template-columns: 1fr; gap: 0; }
+  .student-account-detail div { grid-template-columns: 1fr; }
+}

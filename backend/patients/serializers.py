@@ -1,8 +1,15 @@
 import re
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
+from users.models import Role
+from users.services import generate_temporary_password, validate_account_password
 from .models import Appointment, Patient
+
+
+User = get_user_model()
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -135,3 +142,78 @@ class PatientSerializer(serializers.ModelSerializer):
         if getattr(value, 'content_type', None) not in allowed_types:
             raise serializers.ValidationError('Use a JPEG, PNG, or WebP photograph.')
         return value
+
+
+class StudentPortalAccountSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    temporary_password = serializers.CharField(
+        write_only=True, required=False, trim_whitespace=False
+    )
+
+    def validate_username(self, value):
+        value = value.strip()
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('This username is already in use.')
+        return value
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('This email address is already in use.')
+        return value
+
+    def validate(self, attrs):
+        patient = self.context['patient']
+        if patient.user_id:
+            raise serializers.ValidationError(
+                'This patient already has a linked portal account.'
+            )
+        password = attrs.get('temporary_password')
+        if password:
+            candidate = User(
+                username=attrs.get('username', ''),
+                email=attrs.get('email', ''),
+                first_name=attrs.get('first_name') or patient.first_name or '',
+                last_name=attrs.get('last_name') or patient.last_name or '',
+            )
+            errors = validate_account_password(password, candidate)
+            if errors:
+                raise serializers.ValidationError({'temporary_password': errors})
+        return attrs
+
+    @transaction.atomic
+    def create(self, validated_data):
+        patient = self.context['patient']
+        password = validated_data.pop('temporary_password', None)
+        password = password or generate_temporary_password()
+        user = User(
+            username=validated_data['username'],
+            email=validated_data.get('email') or patient.email or '',
+            first_name=(
+                validated_data.get('first_name') or patient.first_name or ''
+            ),
+            last_name=(
+                validated_data.get('last_name') or patient.last_name or ''
+            ),
+            is_active=True,
+        )
+        user.set_password(password)
+        user.save()
+        profile = user.user
+        profile.role = Role.ROLE_PATIENT
+        profile.phone_number = patient.phone_number or ''
+        profile.must_change_password = True
+        profile.save(update_fields=[
+            'role', 'phone_number', 'must_change_password'
+        ])
+        patient.user = user
+        patient.save(update_fields=['user', 'updated_at'])
+        self.temporary_password = password
+        return user
+
+
+class PortalAccountStatusSerializer(serializers.Serializer):
+    is_active = serializers.BooleanField()

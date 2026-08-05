@@ -8,6 +8,8 @@ jest.mock("../../api/clinicalApi", () => ({
     listStaff: jest.fn(),
     updateStaffRole: jest.fn(),
     updateStaffStatus: jest.fn(),
+    createStaff: jest.fn(),
+    resetStaffTemporaryPassword: jest.fn(),
   },
   apiError: (error, fallback) => ({ message: fallback, fields: {} }),
 }));
@@ -31,4 +33,22 @@ test("administrator can confirm a staff role change", async () => {
   await waitFor(() => expect(clinicalApi.updateStaffRole).toHaveBeenCalledWith(1, "NS"));
   await waitFor(() => expect(select).toHaveValue("NS"));
   window.confirm.mockRestore();
+});
+
+test("administrator can create staff and receives one-time credentials", async () => {
+  clinicalApi.listStaff.mockResolvedValue({ items: [], count: 0 });
+  clinicalApi.createStaff.mockResolvedValue({
+    account: { id: 7, username: "new-doctor", role: "DC" },
+    temporary_password: "GeneratedPass123!",
+  });
+  render(<StaffManagement />);
+  fireEvent.click(await screen.findByRole("button", { name: /create staff account/i }));
+  fireEvent.change(screen.getByLabelText("First name"), { target: { value: "New" } });
+  fireEvent.change(screen.getByLabelText("Last name"), { target: { value: "Doctor" } });
+  fireEvent.change(screen.getByLabelText("Username"), { target: { value: "new-doctor" } });
+  fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "new@clinic.test" } });
+  fireEvent.click(screen.getByRole("button", { name: /^create account$/i }));
+  await waitFor(() => expect(clinicalApi.createStaff).toHaveBeenCalled());
+  expect(await screen.findByText("GeneratedPass123!")).toBeInTheDocument();
+  expect(screen.getByText(/will not be displayed again/i)).toBeInTheDocument();
 });

@@ -1,5 +1,5 @@
 export const BASE_URL =
-  process.env.REACT_APP_BASE_URL || "http://localhost:8000/api/";
+  process.env.REACT_APP_BASE_URL || "http://127.0.0.1:8001/api/";
 export const LOGIN_ENDPOINT = "auth/jwt/create/";
 export const REFRESH_ENDPOINT = "auth/jwt/refresh/";
 export const PATIENTS = "patients/";
@@ -21,4 +21,8 @@ export const MEDICATIONS = "medications/";
 export const PRESCRIPTIONS = "prescriptions/";
 export const AUDIT_LOGS = "audit-logs/";
 export const STAFF = "staff/";
+export const CHANGE_PASSWORD = "account/change-password/";
+export const PASSWORD_RESET = "account/password-reset/";
+export const PASSWORD_RESET_CONFIRM = "account/password-reset/confirm/";
+export const DEMO_ACCESS = "demo-access/";
 export const PAGE_SIZE = 15;

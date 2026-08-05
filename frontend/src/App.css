@@ -1,6 +1,6 @@
 .app-shell {
-  background: #f4f7f5;
-  color: #0f172a;
+  background: var(--surface-subtle);
+  color: var(--ink);
   min-height: 100vh;
 }
 
@@ -30,20 +30,9 @@ button,
   background: linear-gradient(90deg, #c59b47, #b8860b);
 }
 
-.app-footer {
-  background: #ffffff;
-  border-top: 3px solid #c59b47;
-  color: #4b5563;
-  display: grid;
-  gap: 0.25rem;
-  padding: 1.25rem;
-  text-align: center;
-}
-
-.app-footer strong {
-  color: #1f2937;
-}
-
-.app-footer span {
-  font-size: 0.9rem;
+.standalone-state {
+  margin: 0 auto;
+  max-width: 900px;
+  min-height: calc(100vh - 72px);
+  padding: 4rem 1rem;
 }

@@ -59,6 +59,8 @@ class Profile(models.Model):
         on_delete=models.CASCADE, null=True, blank=True
     )
     birth_date = models.DateField(null=True, blank=True)
+    must_change_password = models.BooleanField(default=False, db_index=True)
+    token_version = models.PositiveIntegerField(default=0)
 
     @property
     def is_user(self):

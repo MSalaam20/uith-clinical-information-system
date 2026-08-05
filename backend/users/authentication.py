@@ -1,9 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.models import Role
 
@@ -40,12 +39,25 @@ class PortalTokenObtainPairSerializer(TokenObtainPairSerializer):
         choices=('staff', 'student'), write_only=True, required=False, default='staff'
     )
 
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        profile = getattr(user, 'user', None)
+        token['auth_version'] = getattr(profile, 'token_version', 0)
+        return token
+
     def validate(self, attrs):
         portal_type = attrs.pop('portal_type', 'staff')
         if portal_type not in {'staff', 'student'}:
             raise AuthenticationFailed('Unknown login portal.')
 
         username = attrs.get(self.username_field, '')
+        if '@' in username:
+            email_user = get_user_model().objects.filter(
+                email__iexact=username.strip()
+            ).first()
+            if email_user:
+                attrs[self.username_field] = email_user.get_username()
         try:
             data = super().validate(attrs)
         except AuthenticationFailed:
@@ -80,7 +92,32 @@ class PortalTokenObtainPairSerializer(TokenObtainPairSerializer):
         _log_login(username, True, f'Login through the {portal_type} portal.', self.user)
         return data
 
+class ClinicJWTAuthentication(JWTAuthentication):
+    password_change_paths = {
+        '/api/profile/me/',
+        '/api/account/change-password/',
+    }
 
-class PortalTokenObtainPairView(TokenObtainPairView):
-    serializer_class = PortalTokenObtainPairSerializer
-    permission_classes = (AllowAny,)
+    def authenticate(self, request):
+        authenticated = super().authenticate(request)
+        if authenticated is None:
+            return None
+
+        user, validated_token = authenticated
+        profile = getattr(user, 'user', None)
+        token_version = int(validated_token.get('auth_version', 0))
+        if profile and token_version != profile.token_version:
+            raise AuthenticationFailed(
+                'This session is no longer valid. Sign in again.',
+                code='session_invalidated',
+            )
+        if (
+            profile
+            and profile.must_change_password
+            and request.path not in self.password_change_paths
+        ):
+            raise PermissionDenied(
+                'A password change is required before using the clinic portal.',
+                code='password_change_required',
+            )
+        return user, validated_token

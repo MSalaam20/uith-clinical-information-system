@@ -76,6 +76,10 @@ DJANGO_SECURE_HSTS_SECONDS=31536000
 DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=True
 DJANGO_SECURE_HSTS_PRELOAD=True
 DJANGO_API_DOCS_PUBLIC=False
+FRONTEND_URL=https://ehr.example.invalid
+DEFAULT_FROM_EMAIL=clinic@example.invalid
+SHOW_DEMO_CREDENTIALS=False
+ALLOW_DEMO_ACCOUNTS=False
 ```
 
 The legacy `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST` and
@@ -113,14 +117,36 @@ python -m pip install -r requirements.txt
 python manage.py check
 python manage.py makemigrations --check --dry-run
 python manage.py migrate
-python manage.py seed_uith_data
-python manage.py runserver
+python manage.py bootstrap_admin
+python manage.py runserver 127.0.0.1:8001
 ```
 
-`seed_uith_data` is idempotent for the supplied synthetic clinic demonstration
-records. It creates doctor, nurse, receptionist and student accounts whose demo
-credentials are displayed by the development landing page. These credentials
-must be disabled or changed before any non-demonstration deployment.
+`bootstrap_admin` requests username, email, names, password and confirmation.
+Password entry is hidden, Django's configured password validators run, the user
+and one-to-one clinic profile are updated in a transaction, and no password is
+printed or stored in source. Optional identity arguments still preserve the
+hidden password prompt:
+
+```powershell
+python manage.py bootstrap_admin --username clinic.admin --email admin@example.invalid --first-name Clinic --last-name Administrator
+```
+
+Controlled automation may use `--noinput` with the temporary environment
+variable named by `--password-env`; never place that value in a committed file
+or command history.
+
+For synthetic development or defence accounts only:
+
+```powershell
+python manage.py seed_uith_data
+python manage.py seed_demo_accounts
+```
+
+`seed_demo_accounts` is idempotent and is blocked unless `DJANGO_DEBUG=True` or
+`ALLOW_DEMO_ACCOUNTS=True`. The landing page requests credentials from the
+backend only when `SHOW_DEMO_CREDENTIALS=True`; when false, no credential values
+are present in the rendered UI or frontend bundle. Change or remove every demo
+password before any real deployment.
 
 ## Frontend setup
 
@@ -130,10 +156,11 @@ The selected package manager is npm. `package-lock.json` is authoritative.
 cd frontend
 npm.cmd ci
 npm.cmd test
+$env:PORT=3001
 npm.cmd start
 ```
 
-The API defaults to `http://localhost:8000/api/`. Override it with
+The checked development client uses `http://127.0.0.1:8001/api/`. Override it with
 `REACT_APP_BASE_URL` when required. A production build is created with:
 
 ```powershell
@@ -173,17 +200,20 @@ The DRF default is `IsAuthenticated`. Public access is explicitly limited to
 authentication endpoints and development API documentation. A denied role gets
 HTTP 403; a missing or invalid token gets HTTP 401.
 
-No default administrator password is seeded. Before an administrator demo,
-create an account interactively and assign its automatically created clinic
-profile the administrator role:
+No default administrator password is seeded. Create or update the first
+administrator through the protected local command:
 
 ```powershell
-python manage.py createsuperuser
-python manage.py shell -c "from users.models import Profile,Role; p=Profile.objects.get(user__username='YOUR_ADMIN_USERNAME'); p.role=Role.ROLE_ADMIN; p.save(update_fields=['role'])"
+cd backend
+python manage.py bootstrap_admin
 ```
 
-Use a synthetic username in demonstrations and never place the chosen password
-in source control, shell scripts or screenshots.
+Then start React, sign in through the Clinical Staff Portal, open **Staff
+management**, and create doctors, nurses, receptionists or coordinators. Open a
+verified patient profile to create the linked student account. Each new account
+receives a temporary password shown once; deliver it securely to the intended
+user. The user must sign in through the correct portal and set a permanent
+password before ordinary application routes become available.
 
 ## Main API routes
 
@@ -192,7 +222,12 @@ in source control, shell scripts or screenshots.
 | `POST /api/auth/jwt/create/` | Portal-aware JWT login |
 | `POST /api/auth/jwt/refresh/` | Access-token refresh |
 | `GET /api/profile/me/` | Authenticated profile and role |
+| `POST /api/account/change-password/` | Temporary or normal authenticated password change |
+| `POST /api/account/password-reset/` | Generic password-reset email request |
+| `POST /api/account/password-reset/confirm/` | Token-validated password reset |
+| `GET /api/demo-access/` | Flag-gated synthetic defence credentials |
 | `/api/patients/` | Patient CRUD, search and administrator archive |
+| `/api/patients/{id}/portal-account/` | Administrator/receptionist student account linking |
 | `/api/appointments/` | Appointment CRUD and cancellation |
 | `PATCH /api/appointments/{id}/status/` | Permitted appointment status change |
 | `/api/visits/` | Structured encounters |
@@ -204,7 +239,8 @@ in source control, shell scripts or screenshots.
 | `/api/records/` | Legacy/custom schema-driven clinical forms |
 | `/api/icd-11/search/` | Curated local ICD-11 demonstration search |
 | `/api/audit-logs/` | Administrator-only append-oriented audit trail |
-| `/api/staff/` | Administrator-only staff listing and role assignment |
+| `/api/staff/` | Administrator-only staff listing and account creation |
+| `POST /api/staff/{id}/reset-temporary-password/` | Administrator-issued one-time staff password |
 | `PATCH /api/staff/{id}/status/` | Administrator-only activation/deactivation |
 | `/api/dashboard/summary/` | Role-filtered live dashboard values |
 
@@ -234,6 +270,37 @@ Administrators additionally have `/staff` and `/audit-logs` workspaces. Students
 are automatically routed to their linked patient and cannot retrieve another
 patient by changing a URL.
 
+## Account provisioning sequence
+
+1. Start MariaDB/MySQL and run migrations.
+2. Start Django on `http://127.0.0.1:8001/`.
+3. Run `python manage.py bootstrap_admin` for the first administrator.
+4. Start React on `http://127.0.0.1:3001/`.
+5. Sign in through the Clinical Staff Portal.
+6. Open Staff management and create staff accounts.
+7. Open a patient profile and create its linked student portal account.
+8. Give the one-time temporary credential to the intended user securely.
+9. The user signs in through the appropriate portal and changes the password.
+10. The old temporary credential and all earlier JWT sessions are invalid.
+
+Password-reset emails use Django's configured email backend. Development
+defaults to the console backend; production must configure an authenticated
+SMTP or transactional-email backend and the correct `FRONTEND_URL`.
+
+## Current local ports
+
+- Frontend: `http://127.0.0.1:3001/`
+- Backend API: `http://127.0.0.1:8001/api/`
+- Swagger: `http://127.0.0.1:8001/swagger/`
+
+Ports 3000 and 8000 currently have older Node/Python listeners. Inspect them
+without terminating anything:
+
+```powershell
+netstat -ano | Select-String -Pattern ':3000\s|:3001\s|:8000\s|:8001\s'
+Get-Process -Id <PID> | Select-Object Id,ProcessName,Path,StartTime
+```
+
 ## Verification
 
 Backend:
@@ -256,10 +323,11 @@ npm.cmd test
 npm.cmd run build
 ```
 
-Latest verified local result (5 August 2026): Django found 43 tests and all 43
-passed in 145.029 seconds; Jest ran 15 tests across seven suites and all 15
-passed in 18.215 seconds. The optimized React build completed successfully at
-311.98 kB JavaScript and 40.66 kB CSS after gzip. React Router future-flag
+Latest verified local result (5 August 2026): Django found 61 tests and all 61
+passed in 250.879 seconds; Jest ran 26 tests across 11 suites and all 26
+passed in 22.673 seconds. The route-split React build completed successfully
+with a 130.49 kB initial JavaScript bundle and 38.25 kB main CSS bundle after
+gzip; operational routes are emitted as on-demand chunks. React Router future-flag
 notices occur in its test harness, and the older CRA toolchain emits a Node
 `fs.F_OK` deprecation notice; neither prevented testing or compilation.
 
@@ -276,6 +344,10 @@ docker compose build
 - Access and refresh tokens are held in per-tab `sessionStorage` and removed on
   logout or failed refresh. An HTTP-only cookie design would be preferable for
   a production deployment and requires a coordinated backend change.
+- Password and account-status changes increment a per-profile token version;
+  JWTs issued before that change are rejected by the API.
+- Newly provisioned accounts are restricted to profile and password-change
+  endpoints until a validated permanent password is set.
 - Patient access is filtered through the authenticated `User` to `Patient`
   relationship; submitted patient IDs do not override ownership.
 - Patient deletion is not exposed in the normal UI. Archiving requires an

@@ -1,85 +1,22 @@
 import React, { useEffect, useState } from "react";
-import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
+import Spinner from "react-bootstrap/Spinner";
 import { APPOINTMENTS, PATIENTS, RECORDS } from "../../api/apiConfig";
 import { apiFetch } from "../../api/apiFetch";
 
-const Setup = () => {
+export default function Setup() {
   const [summary, setSummary] = useState({ patients: 0, records: 0, appointments: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   useEffect(() => {
     const loadSummary = async () => {
       try {
-        setLoading(true);
-        setError("");
-        const [patientsData, recordsData, appointmentsData] = await Promise.all([
-          apiFetch(`${PATIENTS}?page=1&page_size=1`),
-          apiFetch(`${RECORDS}?page=1&page_size=1`),
-          apiFetch(`${APPOINTMENTS}?page=1&page_size=1`),
-        ]);
-
-        setSummary({
-          patients: patientsData.count || 0,
-          records: recordsData.count || 0,
-          appointments: Array.isArray(appointmentsData)
-            ? appointmentsData.length
-            : appointmentsData.count || 0,
-        });
-      } catch {
-        setError("The clinic setup summary could not be loaded.");
-      } finally {
-        setLoading(false);
-      }
+        setLoading(true); setError("");
+        const [patients, records, appointments] = await Promise.all([apiFetch(`${PATIENTS}?page=1&page_size=1`), apiFetch(`${RECORDS}?page=1&page_size=1`), apiFetch(`${APPOINTMENTS}?page=1&page_size=1`)]);
+        setSummary({ patients: patients.count || 0, records: records.count || 0, appointments: Array.isArray(appointments) ? appointments.length : appointments.count || 0 });
+      } catch { setError("The clinic setup summary could not be loaded."); }
+      finally { setLoading(false); }
     };
-
     loadSummary();
   }, []);
-
-  return (
-    <Container className="py-4">
-      <Card className="border-0 shadow-sm">
-        <Card.Body>
-          <Card.Title>Clinic Setup</Card.Title>
-          <Card.Text className="text-muted">
-            {loading
-              ? "Loading live backend summary..."
-              : "Live backend summary for the thesis defense environment."}
-          </Card.Text>
-          {error && <p className="text-danger" role="alert">{error}</p>}
-          <Row className="g-3">
-            <Col md={4}>
-              <Card className="h-100">
-                <Card.Body>
-                  <strong>Patients</strong>
-                  <div className="fs-2">{summary.patients}</div>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="h-100">
-                <Card.Body>
-                  <strong>Records</strong>
-                  <div className="fs-2">{summary.records}</div>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="h-100">
-                <Card.Body>
-                  <strong>Appointments</strong>
-                  <div className="fs-2">{summary.appointments}</div>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-    </Container>
-  );
-};
-
-export default Setup;
+  return <main className="setup-workspace"><header className="page-heading"><div><span className="eyebrow">System overview</span><h1>Clinic setup</h1><p>Live operational totals and configured platform context.</p></div></header>{loading && <div className="state-panel"><Spinner animation="border" /><h2>Loading clinic summary</h2></div>}{error && <div className="admin-error" role="alert">{error}</div>}{!loading && !error && <><section className="setup-summary-grid" aria-label="Clinic totals"><article><span>Active patient directory</span><strong>{summary.patients}</strong></article><article><span>Legacy structured records</span><strong>{summary.records}</strong></article><article><span>Appointments</span><strong>{summary.appointments}</strong></article></section><section className="setup-environment"><h2>Configured environment</h2><dl><div><dt>API framework</dt><dd>Django REST Framework</dd></div><div><dt>Clinical client</dt><dd>React portal</dd></div><div><dt>Data store</dt><dd>MariaDB/MySQL</dd></div></dl></section></>}</main>;
+}

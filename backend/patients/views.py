@@ -12,6 +12,8 @@ from .serializers import (
     AppointmentSerializer,
     AppointmentStatusSerializer,
     PatientSerializer,
+    PortalAccountStatusSerializer,
+    StudentPortalAccountSerializer,
 )
 from .pagination import StandardResultsSetPagination
 from .filters import PatientFilter
@@ -19,10 +21,12 @@ from users.permissions import (
     CanManageAppointments,
     CanManagePatients,
     CanUpdateAppointmentStatus,
+    CanManageStudentAccounts,
     IsAuthenticatedClinicUser,
     IsAdministrator,
 )
 from records.audit import log_action
+from users.services import set_temporary_password
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -150,6 +154,10 @@ class PatientViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_permissions(self):
+        if self.action in {
+            'portal_account', 'reset_portal_password', 'set_portal_status'
+        }:
+            return [IsAuthenticated(), CanManageStudentAccounts()]
         if self.action in {'create', 'update', 'partial_update', 'delete_photo'}:
             return [IsAuthenticated(), CanManagePatients()]
         if self.action in {'archive', 'destroy'}:
@@ -239,3 +247,105 @@ class PatientViewSet(viewsets.ModelViewSet):
                 description='Patient photograph removed.',
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['get', 'post'], url_path='portal-account')
+    def portal_account(self, request, pk=None):
+        patient = self.get_object()
+        if request.method == 'GET':
+            return Response(self._portal_account_data(patient))
+
+        serializer = StudentPortalAccountSerializer(
+            data=request.data, context={'patient': patient}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        log_action(
+            request=request,
+            action='student_account_created',
+            resource_type='Patient',
+            resource_id=patient.pk,
+            description='A student portal account was linked to the patient.',
+            metadata={'user_id': user.pk},
+        )
+        return Response({
+            'account': self._portal_account_data(patient),
+            'temporary_password': serializer.temporary_password,
+            'display_once': True,
+        }, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='portal-account/reset-temporary-password',
+    )
+    def reset_portal_password(self, request, pk=None):
+        patient = self.get_object()
+        if not patient.user_id:
+            return Response(
+                {'detail': 'This patient has no linked portal account.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        password = set_temporary_password(patient.user)
+        log_action(
+            request=request,
+            action='student_temporary_password_reset',
+            resource_type='Patient',
+            resource_id=patient.pk,
+            description='A new temporary student portal password was issued.',
+            metadata={'user_id': patient.user_id},
+        )
+        return Response({
+            'account': self._portal_account_data(patient),
+            'temporary_password': password,
+            'display_once': True,
+        })
+
+    @action(
+        detail=True,
+        methods=['patch'],
+        url_path='portal-account/status',
+    )
+    def set_portal_status(self, request, pk=None):
+        patient = self.get_object()
+        if not patient.user_id:
+            return Response(
+                {'detail': 'This patient has no linked portal account.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = PortalAccountStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        patient.user.is_active = serializer.validated_data['is_active']
+        patient.user.save(update_fields=['is_active'])
+        if not patient.user.is_active:
+            patient.user.user.token_version += 1
+            patient.user.user.save(update_fields=['token_version'])
+        log_action(
+            request=request,
+            action='student_account_status_changed',
+            resource_type='Patient',
+            resource_id=patient.pk,
+            description='Student portal account status changed.',
+            metadata={'is_active': patient.user.is_active},
+        )
+        return Response(self._portal_account_data(patient))
+
+    @staticmethod
+    def _portal_account_data(patient):
+        user = patient.user
+        if not user:
+            return {'linked': False}
+        profile = getattr(user, 'user', None)
+        return {
+            'linked': True,
+            'id': user.pk,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_active': user.is_active,
+            'last_login': user.last_login,
+            'role': getattr(profile, 'role', None),
+            'must_change_password': getattr(
+                profile, 'must_change_password', False
+            ),
+        }

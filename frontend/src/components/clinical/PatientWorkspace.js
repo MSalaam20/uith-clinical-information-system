@@ -20,6 +20,7 @@ import { apiError, clinicalApi } from "../../api/clinicalApi";
 import calculateAge from "../../utils";
 import VisitWorkspace from "./VisitWorkspace";
 import LegacyRecordPanel from "./LegacyRecordPanel";
+import StudentPortalAccount from "../account/StudentPortalAccount";
 import "./ClinicalWorkspace.css";
 
 const emptyWorkspace = {
@@ -81,6 +82,7 @@ export default function PatientWorkspace() {
   return (
     <main className="patient-clinical-workspace">
       <PatientHeader patient={patient} loading={loading} refresh={refresh} />
+      <StudentPortalAccount patient={patient} role={role} />
       {error && <div className="workspace-error" role="alert"><span>{error}</span><Button size="sm" variant="outline-danger" onClick={refresh}><RiRefreshLine /> Retry</Button></div>}
       <Tab.Container defaultActiveKey="overview">
         <Nav variant="tabs" className="patient-workspace-tabs" aria-label="Patient record sections">

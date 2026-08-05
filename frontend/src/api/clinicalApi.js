@@ -13,6 +13,11 @@ import {
   TEMPLATES,
   VISITS,
   VITAL_SIGNS,
+  CHANGE_PASSWORD,
+  PASSWORD_RESET,
+  PASSWORD_RESET_CONFIRM,
+  DEMO_ACCESS,
+  PATIENTS,
 } from "./apiConfig";
 
 const collection = (data) => (Array.isArray(data) ? data : data.results || []);
@@ -125,6 +130,7 @@ export const clinicalApi = {
     return response.data;
   },
   listStaff: (params) => list(STAFF, { page_size: 15, ...params }),
+  createStaff: (payload) => create(STAFF, payload),
   updateStaffRole: async (id, role) => {
     const response = await apiClient.patch(`${STAFF}${id}/role/`, { role });
     return response.data;
@@ -133,6 +139,33 @@ export const clinicalApi = {
     const response = await apiClient.patch(`${STAFF}${id}/status/`, {
       is_active: isActive,
     });
+    return response.data;
+  },
+  resetStaffTemporaryPassword: async (id) => {
+    const response = await apiClient.post(`${STAFF}${id}/reset-temporary-password/`);
+    return response.data;
+  },
+  getPatientPortalAccount: async (patientId) => {
+    const response = await apiClient.get(`${PATIENTS}${patientId}/portal-account/`);
+    return response.data;
+  },
+  createPatientPortalAccount: async (patientId, payload) => {
+    const response = await apiClient.post(`${PATIENTS}${patientId}/portal-account/`, payload);
+    return response.data;
+  },
+  resetPatientTemporaryPassword: async (patientId) => {
+    const response = await apiClient.post(`${PATIENTS}${patientId}/portal-account/reset-temporary-password/`);
+    return response.data;
+  },
+  updatePatientPortalStatus: async (patientId, isActive) => {
+    const response = await apiClient.patch(`${PATIENTS}${patientId}/portal-account/status/`, { is_active: isActive });
+    return response.data;
+  },
+  changePassword: async (payload) => apiClient.post(CHANGE_PASSWORD, payload),
+  requestPasswordReset: async (payload) => apiClient.post(PASSWORD_RESET, payload),
+  confirmPasswordReset: async (payload) => apiClient.post(PASSWORD_RESET_CONFIRM, payload),
+  getDemoAccess: async () => {
+    const response = await apiClient.get(DEMO_ACCESS);
     return response.data;
   },
   listAuditLogs: (params) => list(AUDIT_LOGS, { page_size: 15, ...params }),
