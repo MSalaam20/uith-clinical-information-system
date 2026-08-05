@@ -168,6 +168,7 @@ class ClinicalNote(models.Model):
     )
     note_type = models.CharField(max_length=50, default='progress')
     note = models.TextField()
+    patient_visible = models.BooleanField(default=False, db_index=True)
     author = models.ForeignKey(
         Profile,
         on_delete=models.SET_NULL,

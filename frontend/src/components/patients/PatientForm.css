@@ -4,6 +4,21 @@
   /* margin-left: auto; */
   margin-right: 1em;
 }
+
+.patient-photo-input {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 72px 1fr;
+}
+
+.patient-photo-input img {
+  border: 1px solid #dce3df;
+  border-radius: 50%;
+  height: 64px;
+  object-fit: cover;
+  width: 64px;
+}
 .my-button {
   width: 100%;
 }

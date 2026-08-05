@@ -22,16 +22,31 @@ export const fetchPatients = createAsyncThunk(
 
 export const patientsSlice = createSlice({
   name: "patients",
-  initialState: { patients: [], totalPages: 0, currentPage: 1 },
+  initialState: {
+    patients: [],
+    totalPages: 0,
+    currentPage: 1,
+    status: "idle",
+    error: null,
+  },
   reducers: {
     setCurrentPage: (state, action) => {
       state.currentPage = action.payload;
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(fetchPatients.pending, (state) => {
+      state.status = "loading";
+      state.error = null;
+    });
     builder.addCase(fetchPatients.fulfilled, (state, action) => {
       state.patients = action.payload.results;
       state.totalPages = Math.ceil(action.payload.count / PAGE_SIZE);
+      state.status = "succeeded";
+    });
+    builder.addCase(fetchPatients.rejected, (state, action) => {
+      state.status = "failed";
+      state.error = action.payload || action.error.message;
     });
   },
 });

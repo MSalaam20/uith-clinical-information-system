@@ -1,7 +1,5 @@
 .app-shell {
-  background:
-    radial-gradient(circle at top left, rgba(197, 155, 71, 0.11), transparent 28rem),
-    #f8fafc;
+  background: #f4f7f5;
   color: #0f172a;
   min-height: 100vh;
 }
@@ -14,7 +12,7 @@ button,
 }
 
 .card {
-  border-radius: 12px;
+  border-radius: 6px;
 }
 
 .Toastify__toast {

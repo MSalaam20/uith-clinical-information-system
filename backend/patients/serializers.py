@@ -7,6 +7,7 @@ from .models import Appointment, Patient
 
 class AppointmentSerializer(serializers.ModelSerializer):
     patient_matric_number = serializers.CharField(source='patient.matric_number', read_only=True)
+    patient_name = serializers.SerializerMethodField()
     booked_by_name = serializers.SerializerMethodField()
     attended_by_name = serializers.SerializerMethodField()
 
@@ -16,6 +17,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'id',
             'patient',
             'patient_matric_number',
+            'patient_name',
             'scheduled_for',
             'reason',
             'status',
@@ -30,6 +32,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id', 'booked_by', 'created_at', 'updated_at',
             'patient_matric_number', 'booked_by_name', 'attended_by_name',
+            'patient_name',
         ]
 
     def validate(self, attrs):
@@ -54,6 +57,15 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 })
         return attrs
 
+    def get_patient_name(self, obj):
+        return ' '.join(
+            part for part in [
+                obj.patient.first_name,
+                obj.patient.middle_name,
+                obj.patient.last_name,
+            ] if part
+        )
+
     def get_booked_by_name(self, obj):
         if obj.booked_by and obj.booked_by.user:
             return f"{obj.booked_by.user.first_name} {obj.booked_by.user.last_name}".strip()
@@ -63,6 +75,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
         if obj.attended_by and obj.attended_by.user:
             return f"{obj.attended_by.user.first_name} {obj.attended_by.user.last_name}".strip()
         return None
+
+
+class AppointmentStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=Appointment.Status.choices)
 
 
 class PatientSerializer(serializers.ModelSerializer):

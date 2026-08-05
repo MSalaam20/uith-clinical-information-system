@@ -1,52 +1,27 @@
-.fc {
-  background: #fff;
-  border-radius: 12px;
-  padding: 0.75rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.fc-toolbar-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.fc-button {
-  background: #0ea5e9;
-  border: none;
-  border-radius: 8px;
-  color: white;
-}
-
-.fc-button:hover {
-  background: #0284c7;
-}
-
-.fc-daygrid-day-number {
-  color: #374151;
-}
-
-.fc-event {
-  border: none;
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fc-event-title {
-  font-weight: 600;
-}
-
-.fc .fc-daygrid-day.fc-day-today {
-  background: #f8fafc;
-}
-
-.calendar-loading {
-  color: #0284c7;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-}
+.appointment-workspace { margin: 0 auto; max-width: 1500px; min-height: calc(100vh - 76px); padding: 1.5rem; }
+.appointment-workspace > header { border-left: 5px solid #c49a3a; margin-bottom: 1.25rem; padding-left: 1rem; }
+.appointment-workspace > header span { color: #176b56; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+.appointment-workspace > header h1 { color: #27342e; font-size: 1.55rem; font-weight: 800; margin: 0.15rem 0 0; }
+.calendar-toolbar { align-items: center; display: flex; justify-content: space-between; margin-bottom: 0.75rem; }
+.calendar-toolbar span { color: #66736d; font-size: 0.85rem; }
+.calendar-toolbar .btn, .calendar-form-actions .btn { align-items: center; display: inline-flex; gap: 0.35rem; }
+.calendar-error { background: #fff1f0; border: 1px solid #f4c5c1; border-radius: 6px; color: #8f1f17; margin-bottom: 0.75rem; padding: 0.7rem; }
+.fc { background: #ffffff; border: 1px solid #dce3df; border-radius: 6px; padding: 0.75rem; }
+.fc-toolbar-title { color: #28352f; font-size: 1.05rem; font-weight: 800; }
+.fc .fc-button { background: #176b56; border-color: #176b56; border-radius: 4px; color: #ffffff; }
+.fc .fc-button:hover, .fc .fc-button:focus { background: #105340; border-color: #105340; }
+.fc-daygrid-day-number { color: #37433d; }
+.fc-event { border-radius: 3px; cursor: pointer; font-size: 0.78rem; overflow: hidden; padding: 3px 5px; text-overflow: ellipsis; white-space: nowrap; }
+.fc-event-title { font-weight: 650; }
+.fc .fc-daygrid-day.fc-day-today { background: #f2f7f4; }
+.calendar-loading { align-items: center; color: #176b56; display: flex; font-weight: 700; gap: 0.5rem; margin: 2rem; }
+.calendar-form-actions { border-top: 1px solid #e0e6e2; display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; }
+.appointment-detail-title { align-items: center; background: #f4f8f6; border-left: 4px solid #176b56; display: grid; gap: 0.75rem; grid-template-columns: 36px 1fr auto; padding: 0.75rem; }
+.appointment-detail-title > svg { color: #176b56; font-size: 1.5rem; }
+.appointment-detail-title div { display: grid; }
+.appointment-detail-title span { color: #6a766f; font-size: 0.8rem; }
+.appointment-detail dl { display: grid; grid-template-columns: repeat(2, 1fr); margin: 1rem 0; }
+.appointment-detail dl div { border-bottom: 1px solid #e1e7e3; padding: 0.6rem 0; }
+.appointment-detail dt { color: #6b7770; font-size: 0.72rem; }
+.appointment-detail dd { color: #303c36; margin: 0.15rem 0 0; }
+@media (max-width: 700px) { .appointment-workspace { padding: 0.75rem; } .calendar-toolbar { align-items: stretch; flex-direction: column; gap: 0.5rem; } .fc .fc-toolbar { align-items: stretch; flex-direction: column; gap: 0.5rem; } .appointment-detail dl { grid-template-columns: 1fr; } }

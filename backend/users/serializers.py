@@ -63,3 +63,7 @@ class StaffRoleSerializer(serializers.Serializer):
                 'Patient accounts must be managed through the patient workflow.'
             )
         return value
+
+
+class StaffStatusSerializer(serializers.Serializer):
+    is_active = serializers.BooleanField()

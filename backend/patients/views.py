@@ -2,17 +2,23 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter, SearchFilter
 from django.core.files.storage import default_storage
 from rest_framework.decorators import action
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 from .models import Appointment, Patient
-from .serializers import AppointmentSerializer, PatientSerializer
+from .serializers import (
+    AppointmentSerializer,
+    AppointmentStatusSerializer,
+    PatientSerializer,
+)
 from .pagination import StandardResultsSetPagination
 from .filters import PatientFilter
 from users.permissions import (
     CanManageAppointments,
     CanManagePatients,
+    CanUpdateAppointmentStatus,
     IsAuthenticatedClinicUser,
     IsAdministrator,
 )
@@ -24,7 +30,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     serializer_class = AppointmentSerializer
     permission_classes = (IsAuthenticated, IsAuthenticatedClinicUser)
     pagination_class = StandardResultsSetPagination
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filterset_fields = ('patient', 'status', 'attended_by')
+    search_fields = (
+        'patient__matric_number', 'patient__first_name', 'patient__last_name',
+        'reason', 'notes',
+    )
+    ordering_fields = ('scheduled_for', 'status', 'created_at')
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -52,6 +64,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             'create', 'update', 'partial_update', 'destroy', 'cancel'
         }:
             return [IsAuthenticated(), CanManageAppointments()]
+        if self.action == 'set_status':
+            return [IsAuthenticated(), CanUpdateAppointmentStatus()]
         return super().get_permissions()
 
     def perform_create(self, serializer):
@@ -97,6 +111,23 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             resource_type='Appointment',
             resource_id=appointment.pk,
             description='Appointment cancelled.',
+        )
+        return Response(self.get_serializer(appointment).data)
+
+    @action(detail=True, methods=['patch'], url_path='status')
+    def set_status(self, request, pk=None):
+        appointment = self.get_object()
+        serializer = AppointmentStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        appointment.status = serializer.validated_data['status']
+        appointment.save(update_fields=['status', 'updated_at'])
+        log_action(
+            request=request,
+            action='appointment_status_changed',
+            resource_type='Appointment',
+            resource_id=appointment.pk,
+            description='Appointment status changed.',
+            metadata={'status': appointment.status},
         )
         return Response(self.get_serializer(appointment).data)
 

@@ -1,16 +1,28 @@
 import base64
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from organization.models import Department, Organization
-from patients.models import Patient
-from records.models import AuditLog, Schema
+from patients.models import Appointment, Patient
+from records.models import (
+    AuditLog,
+    ClinicalNote,
+    ICDCode,
+    Medication,
+    Prescription,
+    PrescriptionItem,
+    Schema,
+    Visit,
+)
+from records.serializers import PrescriptionSerializer
 from users.models import Role
 from utils.handle_files_in_json import find_and_replace_files_in_json
 
@@ -33,6 +45,15 @@ class RecordAndClinicalApiTests(APITestCase):
             last_name='Patient',
             date_of_birth='2000-01-01',
         )
+        self.nurse = User.objects.create_user('record-nurse', password='Pass123!')
+        self.nurse.user.role = Role.ROLE_NURSE
+        self.nurse.user.save(update_fields=['role'])
+        self.receptionist = User.objects.create_user('record-reception', password='Pass123!')
+        self.receptionist.user.role = Role.ROLE_RECEPTIONIST
+        self.receptionist.user.save(update_fields=['role'])
+        self.admin = User.objects.create_user('record-admin', password='Pass123!')
+        self.admin.user.role = Role.ROLE_ADMIN
+        self.admin.user.save(update_fields=['role'])
         organization = Organization.objects.create(
             long_name='Test Clinic',
             short_name='TC',
@@ -53,6 +74,14 @@ class RecordAndClinicalApiTests(APITestCase):
             },
         )
         self.client.force_authenticate(self.doctor)
+
+    def create_visit(self):
+        return Visit.objects.create(
+            patient=self.patient,
+            visit_date=timezone.now(),
+            chief_complaint='Headache',
+            created_by=self.doctor.user,
+        )
 
     def test_invalid_record_json_is_rejected_by_api(self):
         response = self.client.post('/api/records/', {
@@ -91,6 +120,206 @@ class RecordAndClinicalApiTests(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_visit_rejects_appointment_for_another_patient(self):
+        other = Patient.objects.create(
+            matric_number='REC/OTHER', first_name='Other', last_name='Patient',
+            date_of_birth='2000-01-01'
+        )
+        appointment = Appointment.objects.create(
+            patient=other, scheduled_for=timezone.now(), reason='Other visit'
+        )
+        response = self.client.post('/api/visits/', {
+            'patient': self.patient.id,
+            'appointment': appointment.id,
+            'visit_date': timezone.now().isoformat(),
+            'chief_complaint': 'Headache',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nurse_records_valid_vital_signs_and_audit(self):
+        visit = self.create_visit()
+        self.client.force_authenticate(self.nurse)
+        response = self.client.post('/api/vital-signs/', {
+            'visit': visit.id,
+            'measured_at': timezone.now().isoformat(),
+            'temperature_c': '37.2',
+            'systolic_bp': 120,
+            'diastolic_bp': 80,
+            'weight_kg': '70.00',
+            'height_cm': '175.0',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['bmi'], 22.9)
+        self.assertTrue(AuditLog.objects.filter(action='vitalsign_created').exists())
+
+    def test_invalid_vital_sign_is_rejected(self):
+        visit = self.create_visit()
+        self.client.force_authenticate(self.nurse)
+        response = self.client.post('/api/vital-signs/', {
+            'visit': visit.id,
+            'measured_at': timezone.now().isoformat(),
+            'systolic_bp': 70,
+            'diastolic_bp': 90,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nurse_creates_note_but_cannot_edit_another_author_note(self):
+        visit = self.create_visit()
+        note = ClinicalNote.objects.create(
+            visit=visit, note_type='doctor', note='Doctor-authored note',
+            author=self.doctor.user,
+        )
+        self.client.force_authenticate(self.nurse)
+        create_response = self.client.post('/api/clinical-notes/', {
+            'visit': visit.id, 'note_type': 'nursing', 'note': 'Nursing observation',
+            'patient_visible': True,
+        }, format='json')
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        update_response = self.client.patch(
+            f'/api/clinical-notes/{note.id}/', {'note': 'Changed'}, format='json'
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_student_sees_only_patient_visible_notes_in_list_and_visit(self):
+        visit = self.create_visit()
+        ClinicalNote.objects.create(
+            visit=visit, note='Hidden clinical note', author=self.doctor.user,
+            patient_visible=False,
+        )
+        visible = ClinicalNote.objects.create(
+            visit=visit, note='Patient summary', author=self.doctor.user,
+            patient_visible=True,
+        )
+        self.client.force_authenticate(self.student)
+        list_response = self.client.get('/api/clinical-notes/')
+        self.assertEqual(list_response.data['count'], 1)
+        self.assertEqual(list_response.data['results'][0]['id'], visible.id)
+        visit_response = self.client.get(f'/api/visits/{visit.id}/')
+        self.assertEqual(len(visit_response.data['clinical_notes']), 1)
+        self.assertEqual(visit_response.data['clinical_notes'][0]['id'], visible.id)
+
+    def test_doctor_adds_icd_linked_diagnosis_receptionist_is_denied(self):
+        visit = self.create_visit()
+        icd = ICDCode.objects.create(code='TEST1', title='Synthetic diagnosis')
+        response = self.client.post('/api/diagnoses/', {
+            'visit': visit.id,
+            'icd_code': icd.id,
+            'description': 'Synthetic diagnosis',
+            'diagnosis_type': 'confirmed',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['code_snapshot'], 'TEST1')
+        self.client.force_authenticate(self.receptionist)
+        denied = self.client.post('/api/diagnoses/', {
+            'visit': visit.id, 'description': 'Not allowed'
+        }, format='json')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_doctor_creates_unique_medication(self):
+        payload = {
+            'name': 'Synthetic medicine', 'generic_name': 'Test generic',
+            'strength': '10 mg', 'form': 'tablet',
+        }
+        response = self.client.post('/api/medications/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        duplicate = self.client.post('/api/medications/', payload, format='json')
+        self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_prescription_with_multiple_items_is_created(self):
+        visit = self.create_visit()
+        one = Medication.objects.create(name='Medicine A', strength='5 mg', form='tablet')
+        two = Medication.objects.create(name='Medicine B', strength='10 mg', form='capsule')
+        response = self.client.post('/api/prescriptions/', {
+            'patient': self.patient.id,
+            'visit': visit.id,
+            'prescribed_at': timezone.now().isoformat(),
+            'status': 'active',
+            'items': [
+                {'medication': one.id, 'dose': '5 mg', 'route': 'oral', 'frequency': 'daily', 'duration': '5 days'},
+                {'medication': two.id, 'dose': '10 mg', 'route': 'oral', 'frequency': 'twice daily', 'duration': '3 days'},
+            ],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data['items']), 2)
+
+    def test_invalid_prescription_item_leaves_no_prescription(self):
+        visit = self.create_visit()
+        medication = Medication.objects.create(name='Medicine C')
+        response = self.client.post('/api/prescriptions/', {
+            'patient': self.patient.id,
+            'visit': visit.id,
+            'prescribed_at': timezone.now().isoformat(),
+            'items': [{'medication': medication.id, 'route': 'oral'}],
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Prescription.objects.count(), 0)
+
+    def test_prescription_database_error_rolls_back_all_items(self):
+        visit = self.create_visit()
+        one = Medication.objects.create(name='Rollback A')
+        two = Medication.objects.create(name='Rollback B')
+        serializer = PrescriptionSerializer(data={
+            'patient': self.patient.id,
+            'visit': visit.id,
+            'prescribed_at': timezone.now().isoformat(),
+            'items': [
+                {'medication': one.id, 'dose': '1', 'route': 'oral', 'frequency': 'daily', 'duration': '1 day'},
+                {'medication': two.id, 'dose': '2', 'route': 'oral', 'frequency': 'daily', 'duration': '2 days'},
+            ],
+        })
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        original_create = PrescriptionItem.objects.create
+        calls = {'count': 0}
+
+        def fail_second_item(**kwargs):
+            calls['count'] += 1
+            if calls['count'] == 2:
+                raise IntegrityError('synthetic item failure')
+            return original_create(**kwargs)
+
+        with patch(
+            'records.serializers.PrescriptionItem.objects.create',
+            side_effect=fail_second_item,
+        ):
+            with self.assertRaises(IntegrityError):
+                serializer.save(prescribed_by=self.doctor.user)
+        self.assertEqual(Prescription.objects.count(), 0)
+        self.assertEqual(PrescriptionItem.objects.count(), 0)
+
+    def test_prescription_patient_visit_mismatch_and_student_mutation_rejected(self):
+        other = Patient.objects.create(
+            matric_number='REC/OTHER2', first_name='Other', last_name='Patient',
+            date_of_birth='2000-01-01'
+        )
+        visit = self.create_visit()
+        medication = Medication.objects.create(name='Mismatch medicine')
+        payload = {
+            'patient': other.id,
+            'visit': visit.id,
+            'prescribed_at': timezone.now().isoformat(),
+            'items': [{'medication': medication.id, 'dose': '1', 'route': 'oral', 'frequency': 'daily', 'duration': '1 day'}],
+        }
+        mismatch = self.client.post('/api/prescriptions/', payload, format='json')
+        self.assertEqual(mismatch.status_code, status.HTTP_400_BAD_REQUEST)
+        self.client.force_authenticate(self.student)
+        payload['patient'] = self.patient.id
+        denied = self.client.post('/api/prescriptions/', payload, format='json')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_audit_log_is_administrator_only_and_read_only(self):
+        audit = AuditLog.objects.create(
+            user=self.doctor, action='test_event', resource_type='Visit'
+        )
+        denied = self.client.get('/api/audit-logs/')
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+        self.client.force_authenticate(self.admin)
+        allowed = self.client.get('/api/audit-logs/?action=test')
+        self.assertEqual(allowed.status_code, status.HTTP_200_OK)
+        update = self.client.patch(
+            f'/api/audit-logs/{audit.id}/', {'description': 'Changed'}
+        )
+        self.assertEqual(update.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 class NestedFileHandlingTests(APITestCase):
     def test_nested_base64_image_is_stored(self):
@@ -107,6 +336,15 @@ class NestedFileHandlingTests(APITestCase):
 
     def test_invalid_base64_is_rejected(self):
         data = {'image': 'data:image/png;base64,not-valid***'}
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValidationError):
+                find_and_replace_files_in_json(
+                    data, 'data:image/', 'record-file', directory
+                )
+
+    def test_invalid_image_signature_is_rejected(self):
+        encoded = base64.b64encode(b'not-a-real-png').decode('ascii')
+        data = {'image': f'data:image/png;base64,{encoded}'}
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(ValidationError):
                 find_and_replace_files_in_json(

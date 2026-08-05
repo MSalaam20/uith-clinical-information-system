@@ -16,6 +16,8 @@ import { ToastContainer } from "react-toastify";
 import Container from "react-bootstrap/Container";
 import { AUTH_EXPIRED_EVENT } from "./api/authSession";
 import { authSessionExpired } from "./slices/AuthSlice";
+import StaffManagement from "./components/admin/StaffManagement";
+import AuditLogViewer from "./components/admin/AuditLogViewer";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -55,6 +57,14 @@ const App = () => {
             element={
               <ProtectedRoute isAuthenticated={isAuthenticated} role={role}>
                 <PatientMainPage expand="lg" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patients/:patientId"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} role={role}>
+                <PatientMainPage />
               </ProtectedRoute>
             }
           />
@@ -99,6 +109,22 @@ const App = () => {
                 allowedRoles={staffRoles}
               >
                 <Setup />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} role={role} allowedRoles={["AD"]}>
+                <StaffManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated} role={role} allowedRoles={["AD"]}>
+                <AuditLogViewer />
               </ProtectedRoute>
             }
           />

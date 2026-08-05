@@ -65,7 +65,7 @@ const PatientProfile = () => {
         .then((template) => {
           setSelectedTemplates(template);
         })
-        .catch((error) => console.error("Failed to load template:", error));
+        .catch(() => setSelectedTemplates(null));
     }
   }, [selectedSchema, dispatch]);
 

@@ -4,8 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from patients.models import Appointment, Patient
-from records.models import Record, Visit
-from users.models import Role
+from records.models import AuditLog, Diagnosis, Record, Visit, VitalSign
+from users.models import Profile, Role
 from users.permissions import IsAuthenticatedClinicUser
 
 
@@ -88,7 +88,17 @@ def dashboard_summary(request):
         records = records.filter(patient__user=request.user)
         visits = visits.filter(patient__user=request.user)
 
-    return Response({
+    recent_visits = visits.select_related('patient').order_by('-visit_date')[:5]
+    recent_appointments = appointments.select_related('patient').order_by(
+        '-scheduled_for'
+    )[:5]
+    is_admin = (
+        request.user.is_staff
+        or request.user.is_superuser
+        or (profile and profile.role == Role.ROLE_ADMIN)
+    )
+
+    data = {
         'patients': patients.count(),
         'patients_registered_today': patients.filter(
             created_at__date=today
@@ -101,5 +111,44 @@ def dashboard_summary(request):
         ).count(),
         'records': records.count(),
         'visits': visits.count(),
+        'open_visits': visits.filter(status=Visit.Status.OPEN).count(),
+        'vital_signs_today': VitalSign.objects.filter(
+            visit__in=visits, measured_at__date=today
+        ).count(),
+        'diagnoses_today': Diagnosis.objects.filter(
+            visit__in=visits, created_at__date=today
+        ).count(),
         'role': profile.get_role_display() if profile else 'administrator',
-    })
+        'recent_visits': [
+            {
+                'id': visit.pk,
+                'patient_id': visit.patient_id,
+                'patient_name': str(visit.patient),
+                'visit_date': visit.visit_date,
+                'status': visit.status,
+                'chief_complaint': visit.chief_complaint,
+            }
+            for visit in recent_visits
+        ],
+        'recent_appointments': [
+            {
+                'id': appointment.pk,
+                'patient_id': appointment.patient_id,
+                'patient_name': str(appointment.patient),
+                'scheduled_for': appointment.scheduled_for,
+                'status': appointment.status,
+                'reason': appointment.reason,
+            }
+            for appointment in recent_appointments
+        ],
+    }
+    if is_admin:
+        data['total_staff'] = Profile.objects.exclude(
+            role=Role.ROLE_PATIENT
+        ).exclude(role=Role.ROLE_USER).count()
+        data['recent_audit_activity'] = list(
+            AuditLog.objects.values(
+                'id', 'action', 'resource_type', 'success', 'timestamp'
+            )[:5]
+        )
+    return Response(data)

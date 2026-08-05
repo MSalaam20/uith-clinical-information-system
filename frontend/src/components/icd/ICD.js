@@ -11,6 +11,7 @@ const ICD = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -22,10 +23,11 @@ const ICD = () => {
 
     try {
       setLoading(true);
+      setError("");
       const data = await apiFetch(`${ICD11}search/?q=${encodeURIComponent(query)}`);
       setResults(data.results || []);
-    } catch (error) {
-      console.error("ICD-11 search failed:", error);
+    } catch {
+      setError("ICD-11 search is temporarily unavailable.");
       setResults([]);
     } finally {
       setLoading(false);
@@ -58,6 +60,7 @@ const ICD = () => {
             {loading ? "Searching..." : "Search"}
           </Button>
         </Form>
+        {error && <p className="text-danger" role="alert">{error}</p>}
 
         <div className="icd-results">
           {results.map((result) => (

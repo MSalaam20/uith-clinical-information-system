@@ -7,6 +7,8 @@ from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -26,7 +28,7 @@ from utils.handle_files_in_json import (
     find_and_replace_url_in_json,
 )
 from .audit import log_action
-from .filters import RecordFilter
+from .filters import AuditLogFilter, RecordFilter
 from .models import (
     AuditLog,
     ClinicalNote,
@@ -225,6 +227,7 @@ class SchemaViewSet(viewsets.ModelViewSet):
 class PatientOwnedClinicalViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated, IsAuthenticatedClinicUser)
     patient_lookup = 'visit__patient__user'
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -245,6 +248,22 @@ class PatientOwnedClinicalViewSet(viewsets.ModelViewSet):
             description=f'{instance.__class__.__name__} {verb}.',
         )
 
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self.audit(instance, 'updated')
+
+    def perform_destroy(self, instance):
+        model_name = instance.__class__.__name__
+        resource_id = instance.pk
+        instance.delete()
+        log_action(
+            request=self.request,
+            action=f'{instance._meta.model_name}_deleted',
+            resource_type=model_name,
+            resource_id=resource_id,
+            description=f'{model_name} deleted.',
+        )
+
 
 class VisitViewSet(PatientOwnedClinicalViewSet):
     queryset = Visit.objects.select_related(
@@ -252,6 +271,9 @@ class VisitViewSet(PatientOwnedClinicalViewSet):
     ).prefetch_related('vital_signs', 'diagnoses', 'clinical_notes', 'prescriptions')
     serializer_class = VisitSerializer
     patient_lookup = 'patient__user'
+    filterset_fields = ('patient', 'status', 'appointment')
+    ordering_fields = ('visit_date', 'created_at', 'status')
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
@@ -270,6 +292,9 @@ class VisitViewSet(PatientOwnedClinicalViewSet):
 class VitalSignViewSet(PatientOwnedClinicalViewSet):
     queryset = VitalSign.objects.select_related('visit__patient', 'recorded_by__user')
     serializer_class = VitalSignSerializer
+    filterset_fields = ('visit',)
+    ordering_fields = ('measured_at', 'created_at')
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
@@ -284,6 +309,15 @@ class VitalSignViewSet(PatientOwnedClinicalViewSet):
 class ClinicalNoteViewSet(PatientOwnedClinicalViewSet):
     queryset = ClinicalNote.objects.select_related('visit__patient', 'author__user')
     serializer_class = ClinicalNoteSerializer
+    filterset_fields = ('visit', 'note_type', 'patient_visible')
+    ordering_fields = ('created_at', 'updated_at')
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if _is_patient_request(self.request):
+            queryset = queryset.filter(patient_visible=True)
+        return queryset
 
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
@@ -294,12 +328,33 @@ class ClinicalNoteViewSet(PatientOwnedClinicalViewSet):
         note = serializer.save(author=_patient_profile(self.request))
         self.audit(note, 'created')
 
+    def _require_author_or_admin(self, note):
+        profile = _patient_profile(self.request)
+        is_admin = (
+            self.request.user.is_staff
+            or self.request.user.is_superuser
+            or (profile and profile.role == Role.ROLE_ADMIN)
+        )
+        if not is_admin and note.author_id != getattr(profile, 'id', None):
+            raise PermissionDenied('Only the note author or an administrator may change it.')
+
+    def perform_update(self, serializer):
+        self._require_author_or_admin(serializer.instance)
+        super().perform_update(serializer)
+
+    def perform_destroy(self, instance):
+        self._require_author_or_admin(instance)
+        super().perform_destroy(instance)
+
 
 class DiagnosisViewSet(PatientOwnedClinicalViewSet):
     queryset = Diagnosis.objects.select_related(
         'visit__patient', 'icd_code', 'diagnosed_by__user'
     )
     serializer_class = DiagnosisSerializer
+    filterset_fields = ('visit', 'icd_code', 'diagnosis_type')
+    ordering_fields = ('created_at',)
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
@@ -317,6 +372,9 @@ class PrescriptionViewSet(PatientOwnedClinicalViewSet):
     ).prefetch_related('items__medication')
     serializer_class = PrescriptionSerializer
     patient_lookup = 'patient__user'
+    filterset_fields = ('patient', 'visit', 'status')
+    ordering_fields = ('prescribed_at', 'created_at')
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
 
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
@@ -332,18 +390,57 @@ class MedicationViewSet(viewsets.ModelViewSet):
     queryset = Medication.objects.all().order_by('name', 'strength')
     serializer_class = MedicationSerializer
     permission_classes = (IsAuthenticated, IsClinicalStaff)
+    pagination_class = StandardResultsSetPagination
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filterset_fields = ('is_active', 'form')
+    search_fields = ('name', 'generic_name', 'strength', 'form')
+    ordering_fields = ('name', 'generic_name', 'strength')
 
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
             return [IsAuthenticated(), IsDoctorOrAdmin()]
         return super().get_permissions()
 
+    def perform_create(self, serializer):
+        medication = serializer.save()
+        log_action(
+            request=self.request,
+            action='medication_created',
+            resource_type='Medication',
+            resource_id=medication.pk,
+            description='Medication presentation created.',
+        )
+
+    def perform_update(self, serializer):
+        medication = serializer.save()
+        log_action(
+            request=self.request,
+            action='medication_updated',
+            resource_type='Medication',
+            resource_id=medication.pk,
+            description='Medication presentation updated.',
+        )
+
+    def perform_destroy(self, instance):
+        medication_id = instance.pk
+        instance.delete()
+        log_action(
+            request=self.request,
+            action='medication_deleted',
+            resource_type='Medication',
+            resource_id=medication_id,
+            description='Unused medication presentation deleted.',
+        )
+
 
 class ICDCodeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ICDCode.objects.all().order_by('code')
     serializer_class = ICDCodeSerializer
     permission_classes = (IsAuthenticated,)
+    pagination_class = StandardResultsSetPagination
+    filter_backends = (SearchFilter, OrderingFilter)
     search_fields = ('code', 'title', 'chapter')
+    ordering_fields = ('code', 'title')
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -351,4 +448,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
     permission_classes = (IsAuthenticated, IsAdministrator)
     pagination_class = StandardResultsSetPagination
-    filterset_fields = ('action', 'resource_type', 'success', 'user')
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
+    filterset_class = AuditLogFilter
+    search_fields = ('user__username', 'action', 'resource_type', 'description')
+    ordering_fields = ('timestamp', 'action', 'resource_type', 'success')

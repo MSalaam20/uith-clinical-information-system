@@ -15,6 +15,7 @@ import ArrayFieldTemplate from "../rjsfCustom/ArrayFieldTemplate";
 const ModalRecordForm = ({ currentTemplate }) => {
   const [formData, setInputValue] = useState(currentTemplate?.findings);
   const [usedTemplates, setUsedTemplates] = useState([]);
+  const [error, setError] = useState("");
   const dispatch = useDispatch();
   const patientId = useSelector((state) => state.patientForm.patient.id);
   const currentSchemaId = useSelector(
@@ -68,6 +69,7 @@ const ModalRecordForm = ({ currentTemplate }) => {
   };
 
   const onSubmit = ({ formData }) => {
+    setError("");
     const payload = {
       patient_id: patientId,
       findings: JSON.stringify(formData || {}),
@@ -82,16 +84,15 @@ const ModalRecordForm = ({ currentTemplate }) => {
       }
     });
 
-    dispatch(createRecord(formPayload, dispatch)).then(() => {
-      closeForm();
+    dispatch(createRecord(formPayload)).unwrap().then(() =>
       dispatch(
         fetchRecords({
           page: 1,
           patient_id: patientId,
         })
-      ).catch((error) => {
-        console.error("Error when create a record:", error);
-      });
+      ).unwrap()
+    ).then(closeForm).catch(() => {
+      setError("The custom clinical record could not be saved.");
     });
   };
 
@@ -105,6 +106,7 @@ const ModalRecordForm = ({ currentTemplate }) => {
         <Card.Title>Used templates: {usedTemplates.join(", ")}</Card.Title>
       </Card.Header>
       <Card.Body>
+        {error && <p className="text-danger" role="alert">{error}</p>}
         <Form
           schema={currentSchema.schema}
           onSubmit={onSubmit}

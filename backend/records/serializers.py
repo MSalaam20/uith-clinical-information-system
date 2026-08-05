@@ -1,8 +1,9 @@
 import json
+from django.db import transaction
 from rest_framework import serializers
 
 from patients.models import Patient
-from users.models import Profile
+from users.models import Profile, Role
 from utils.validators import compile_with_custom_formats
 from .models import (
     AuditLog,
@@ -51,6 +52,18 @@ class SpecialistNameSerializer(serializers.ModelSerializer):
                 profile.user.last_name,
             ] if part
         )
+
+
+def profile_display_name(profile):
+    if not profile or not profile.user:
+        return None
+    return ' '.join(
+        part for part in [
+            profile.user.first_name,
+            profile.middle_name,
+            profile.user.last_name,
+        ] if part
+    ) or profile.user.username
 
 
 class FindingsValidationMixin:
@@ -122,10 +135,24 @@ class SchemaDetailSerializer(serializers.ModelSerializer):
 
 
 class VitalSignSerializer(serializers.ModelSerializer):
+    recorded_by_name = serializers.SerializerMethodField()
+    bmi = serializers.SerializerMethodField()
+
     class Meta:
         model = VitalSign
         fields = '__all__'
-        read_only_fields = ['id', 'recorded_by', 'created_at']
+        read_only_fields = [
+            'id', 'recorded_by', 'recorded_by_name', 'bmi', 'created_at'
+        ]
+
+    def get_recorded_by_name(self, vital_sign):
+        return profile_display_name(vital_sign.recorded_by)
+
+    def get_bmi(self, vital_sign):
+        if not vital_sign.height_cm or not vital_sign.weight_kg:
+            return None
+        height_m = float(vital_sign.height_cm) / 100
+        return round(float(vital_sign.weight_kg) / (height_m * height_m), 1)
 
     def validate(self, attrs):
         systolic = attrs.get('systolic_bp')
@@ -146,10 +173,17 @@ class VitalSignSerializer(serializers.ModelSerializer):
 
 
 class ClinicalNoteSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
     class Meta:
         model = ClinicalNote
         fields = '__all__'
-        read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'author', 'author_name', 'created_at', 'updated_at'
+        ]
+
+    def get_author_name(self, note):
+        return profile_display_name(note.author)
 
 
 class ICDCodeSerializer(serializers.ModelSerializer):
@@ -160,11 +194,18 @@ class ICDCodeSerializer(serializers.ModelSerializer):
 
 class DiagnosisSerializer(serializers.ModelSerializer):
     icd = ICDCodeSerializer(source='icd_code', read_only=True)
+    diagnosed_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Diagnosis
         fields = '__all__'
-        read_only_fields = ['id', 'code_snapshot', 'diagnosed_by', 'created_at']
+        read_only_fields = [
+            'id', 'code_snapshot', 'diagnosed_by', 'diagnosed_by_name',
+            'created_at',
+        ]
+
+    def get_diagnosed_by_name(self, diagnosis):
+        return profile_display_name(diagnosis.diagnosed_by)
 
     def create(self, validated_data):
         icd_code = validated_data.get('icd_code')
@@ -183,6 +224,21 @@ class MedicationSerializer(serializers.ModelSerializer):
         model = Medication
         fields = '__all__'
 
+    def validate(self, attrs):
+        name = attrs.get('name', getattr(self.instance, 'name', ''))
+        strength = attrs.get('strength', getattr(self.instance, 'strength', ''))
+        form = attrs.get('form', getattr(self.instance, 'form', ''))
+        duplicates = Medication.objects.filter(
+            name=name, strength=strength, form=form
+        )
+        if self.instance:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError(
+                'This medication presentation already exists.'
+            )
+        return attrs
+
 
 class PrescriptionItemSerializer(serializers.ModelSerializer):
     medication_detail = MedicationSerializer(source='medication', read_only=True)
@@ -195,11 +251,17 @@ class PrescriptionItemSerializer(serializers.ModelSerializer):
 
 class PrescriptionSerializer(serializers.ModelSerializer):
     items = PrescriptionItemSerializer(many=True, required=False)
+    prescribed_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Prescription
         fields = '__all__'
-        read_only_fields = ['id', 'prescribed_by', 'created_at']
+        read_only_fields = [
+            'id', 'prescribed_by', 'prescribed_by_name', 'created_at'
+        ]
+
+    def get_prescribed_by_name(self, prescription):
+        return profile_display_name(prescription.prescribed_by)
 
     def validate(self, attrs):
         patient = attrs.get('patient', getattr(self.instance, 'patient', None))
@@ -208,8 +270,13 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'visit': 'The selected visit belongs to a different patient.'}
             )
+        if self.instance is None and not attrs.get('items'):
+            raise serializers.ValidationError({
+                'items': 'Add at least one valid prescription item.'
+            })
         return attrs
 
+    @transaction.atomic
     def create(self, validated_data):
         items = validated_data.pop('items', [])
         prescription = Prescription.objects.create(**validated_data)
@@ -221,13 +288,38 @@ class PrescriptionSerializer(serializers.ModelSerializer):
 class VisitSerializer(serializers.ModelSerializer):
     vital_signs = VitalSignSerializer(many=True, read_only=True)
     diagnoses = DiagnosisSerializer(many=True, read_only=True)
-    clinical_notes = ClinicalNoteSerializer(many=True, read_only=True)
+    clinical_notes = serializers.SerializerMethodField()
     prescriptions = PrescriptionSerializer(many=True, read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Visit
         fields = '__all__'
-        read_only_fields = ['id', 'uuid', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'uuid', 'created_by', 'created_by_name', 'patient_name',
+            'created_at', 'updated_at',
+        ]
+
+    def get_created_by_name(self, visit):
+        return profile_display_name(visit.created_by)
+
+    def get_clinical_notes(self, visit):
+        notes = visit.clinical_notes.all()
+        request = self.context.get('request')
+        profile = getattr(getattr(request, 'user', None), 'user', None)
+        if profile and profile.role == Role.ROLE_PATIENT:
+            notes = notes.filter(patient_visible=True)
+        return ClinicalNoteSerializer(notes, many=True, context=self.context).data
+
+    def get_patient_name(self, visit):
+        return ' '.join(
+            part for part in [
+                visit.patient.first_name,
+                visit.patient.middle_name,
+                visit.patient.last_name,
+            ] if part
+        )
 
     def validate(self, attrs):
         patient = attrs.get('patient', getattr(self.instance, 'patient', None))

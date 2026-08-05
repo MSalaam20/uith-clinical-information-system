@@ -1,26 +1,45 @@
-import React from "react";
-import Container from "react-bootstrap/Container";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import PatientProfile from "./PatientProfile.js";
-import PatientRecord from "./PatientRecord.js";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import PatientWorkspace from "../clinical/PatientWorkspace";
 import PatientsList from "./PatientsList.js";
+import { fetchPatients } from "../../slices/PatientsSlice";
+import { loadPatient } from "../../slices/patientForm/loadPatient";
+import "./Patients.css";
 
 const PatientMainPage = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { patientId } = useParams();
+  const role = useSelector((state) => state.auth.profile?.role);
+  const patients = useSelector((state) => state.patients.patients);
+  const patientsStatus = useSelector((state) => state.patients.status);
+  const selectedPatient = useSelector((state) => state.patientForm.patient);
+  const isStudent = role === "PT";
+
+  useEffect(() => {
+    if (patientId && String(selectedPatient?.id) !== String(patientId)) {
+      dispatch(loadPatient(patientId));
+    }
+  }, [dispatch, patientId, selectedPatient?.id]);
+
+  useEffect(() => {
+    if (isStudent && patientsStatus === "idle") {
+      dispatch(fetchPatients({ page: 1, filters: {} }));
+    }
+  }, [dispatch, isStudent, patientsStatus]);
+
+  useEffect(() => {
+    if (isStudent && !patientId && patients.length === 1) {
+      navigate(`/patients/${patients[0].id}`, { replace: true });
+    }
+  }, [isStudent, navigate, patientId, patients]);
+
   return (
-    <Container fluid className="ps-1 pe-1 pt-0 pb-1 m-0">
-      <Row className="gx-1">
-        <Col xs lg="3">
-          <PatientsList />
-        </Col>
-        <Col xs lg="3">
-          <PatientProfile />
-        </Col>
-        <Col xs lg="6">
-          <PatientRecord />
-        </Col>
-      </Row>
-    </Container>
+    <div className={`patient-page-layout ${isStudent ? "student-view" : ""}`}>
+      {!isStudent && <PatientsList />}
+      <PatientWorkspace />
+    </div>
   );
 };
 

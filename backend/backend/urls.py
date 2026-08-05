@@ -8,7 +8,8 @@ from drf_yasg import openapi
 from .views import dashboard_summary, icd11_search
 
 
-schema_permission = permissions.AllowAny if settings.DEBUG else permissions.IsAdminUser
+schema_is_public = settings.DEBUG or settings.API_DOCS_PUBLIC
+schema_permission = permissions.AllowAny if schema_is_public else permissions.IsAdminUser
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -20,7 +21,7 @@ schema_view = get_schema_view(
       ),
       contact=openapi.Contact(email="schoolclinic@example.invalid"),
    ),
-   public=settings.DEBUG,
+   public=schema_is_public,
    permission_classes=(schema_permission,),
 )
 

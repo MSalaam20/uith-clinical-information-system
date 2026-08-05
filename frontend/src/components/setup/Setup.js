@@ -9,11 +9,13 @@ import { apiFetch } from "../../api/apiFetch";
 const Setup = () => {
   const [summary, setSummary] = useState({ patients: 0, records: 0, appointments: 0 });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const loadSummary = async () => {
       try {
         setLoading(true);
+        setError("");
         const [patientsData, recordsData, appointmentsData] = await Promise.all([
           apiFetch(`${PATIENTS}?page=1&page_size=1`),
           apiFetch(`${RECORDS}?page=1&page_size=1`),
@@ -27,8 +29,8 @@ const Setup = () => {
             ? appointmentsData.length
             : appointmentsData.count || 0,
         });
-      } catch (error) {
-        console.error("Failed to load setup summary:", error);
+      } catch {
+        setError("The clinic setup summary could not be loaded.");
       } finally {
         setLoading(false);
       }
@@ -47,6 +49,7 @@ const Setup = () => {
               ? "Loading live backend summary..."
               : "Live backend summary for the thesis defense environment."}
           </Card.Text>
+          {error && <p className="text-danger" role="alert">{error}</p>}
           <Row className="g-3">
             <Col md={4}>
               <Card className="h-100">

@@ -7,34 +7,59 @@ import { loadPatient } from "./patientForm/loadPatient";
 
 const patientFormSlice = createSlice({
   name: "patientForm",
-  initialState: { status: "idle", error: null, showForm: false, patient: null },
+  initialState: {
+    status: "idle",
+    error: null,
+    showForm: false,
+    formMode: "create",
+    patient: null,
+    loadStatus: "idle",
+    loadError: null,
+  },
   reducers: {
-    openForm: (state) => {
+    openCreateForm: (state) => {
       state.showForm = true;
+      state.formMode = "create";
       state.patient = null;
+    },
+    openEditForm: (state) => {
+      state.showForm = true;
+      state.formMode = "edit";
     },
     closeForm: (state) => {
       state.showForm = false;
       state.status = "idle";
-      state.patient = null;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder.addCase(createPatient.pending, (state) => {
       state.status = "loading";
     });
-    builder.addCase(createPatient.fulfilled, (state) => {
+    builder.addCase(createPatient.fulfilled, (state, action) => {
       state.status = "succeeded";
+      state.patient = action.payload;
     });
     builder.addCase(createPatient.rejected, (state, action) => {
       state.status = "failed";
       state.error = action.error.message;
     });
+    builder.addCase(loadPatient.pending, (state) => {
+      state.loadStatus = "loading";
+      state.loadError = null;
+    });
     builder.addCase(loadPatient.fulfilled, (state, action) => {
       state.patient = action.payload;
+      state.loadStatus = "succeeded";
+    });
+    builder.addCase(loadPatient.rejected, (state, action) => {
+      state.patient = null;
+      state.loadStatus = "failed";
+      state.loadError = action.payload || action.error.message;
     });
     builder.addCase(updatePatient.fulfilled, (state, action) => {
       state.status = "succeeded";
+      state.patient = action.payload;
     });
     builder.addCase(archivePatient.fulfilled, (state) => {
       state.status = "archived";
@@ -46,6 +71,6 @@ const patientFormSlice = createSlice({
   },
 });
 
-export const { openForm, closeForm } = patientFormSlice.actions;
+export const { openCreateForm, openEditForm, closeForm } = patientFormSlice.actions;
 export const status = (state) => state.patientForm.status;
 export default patientFormSlice.reducer;

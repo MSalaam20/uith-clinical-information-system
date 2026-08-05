@@ -28,18 +28,30 @@ LOGGING = {
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config(
-    'SECRET_KEY',
-    default='unsafe-development-only-key-not-for-production-2026-change-me-now',
+DEVELOPMENT_SECRET_KEY = (
+    'unsafe-development-only-key-not-for-production-2026-change-me-now'
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool('DJANGO_DEBUG', default=True)
 
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = config(
+    'DJANGO_SECRET_KEY',
+    default=config(
+        'SECRET_KEY',
+        default=DEVELOPMENT_SECRET_KEY,
+    ),
+)
+
+if not DEBUG and SECRET_KEY == DEVELOPMENT_SECRET_KEY:
+    raise RuntimeError(
+        'DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.'
+    )
+
 ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1',
+    'DJANGO_ALLOWED_HOSTS',
+    default=config('ALLOWED_HOSTS', default='localhost,127.0.0.1'),
     cast=Csv(),
 )
 
@@ -67,8 +79,11 @@ INSTALLED_APPS = [
 ]
 
 CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:8000',
+    'DJANGO_CORS_ALLOWED_ORIGINS',
+    default=config(
+        'CORS_ALLOWED_ORIGINS',
+        default='http://localhost:3000,http://localhost:8000',
+    ),
     cast=Csv(),
 )
 
@@ -77,8 +92,11 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
 CSRF_TRUSTED_ORIGINS = config(
-    'CSRF_TRUSTED_ORIGINS',
-    default='http://localhost:3000,http://localhost:8000',
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    default=config(
+        'CSRF_TRUSTED_ORIGINS',
+        default='http://localhost:3000,http://localhost:8000',
+    ),
     cast=Csv(),
 )
 
@@ -252,12 +270,34 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = config(
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', default=False)
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
-    'SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False
+SECURE_PROXY_SSL_HEADER = (
+    ('HTTP_X_FORWARDED_PROTO', 'https')
+    if env_bool('DJANGO_USE_PROXY_SSL_HEADER', default=True)
+    else None
 )
-SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', default=False)
-SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', default=False)
-CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', default=False)
+SECURE_SSL_REDIRECT = env_bool(
+    'DJANGO_SECURE_SSL_REDIRECT',
+    default=env_bool('SECURE_SSL_REDIRECT', default=False),
+)
+SECURE_HSTS_SECONDS = config(
+    'DJANGO_SECURE_HSTS_SECONDS',
+    default=config('SECURE_HSTS_SECONDS', default=0),
+    cast=int,
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    'DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS',
+    default=env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False),
+)
+SECURE_HSTS_PRELOAD = env_bool(
+    'DJANGO_SECURE_HSTS_PRELOAD',
+    default=env_bool('SECURE_HSTS_PRELOAD', default=False),
+)
+SESSION_COOKIE_SECURE = env_bool(
+    'DJANGO_SESSION_COOKIE_SECURE',
+    default=env_bool('SESSION_COOKIE_SECURE', default=False),
+)
+CSRF_COOKIE_SECURE = env_bool(
+    'DJANGO_CSRF_COOKIE_SECURE',
+    default=env_bool('CSRF_COOKIE_SECURE', default=False),
+)
+API_DOCS_PUBLIC = env_bool('DJANGO_API_DOCS_PUBLIC', default=False)

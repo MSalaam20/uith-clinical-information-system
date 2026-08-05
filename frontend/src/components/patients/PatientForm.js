@@ -1,305 +1,147 @@
-import React from "react";
-import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
+import React, { useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
-import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { useReducer, useRef, useEffect, useState } from "react";
+import Form from "react-bootstrap/Form";
+import Row from "react-bootstrap/Row";
+import Spinner from "react-bootstrap/Spinner";
+import { RiArchiveLine, RiSaveLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
-import { closeForm } from "../../slices/patientFormSlice";
 import { createPatient } from "../../slices/patientForm/createPatient";
 import { archivePatient } from "../../slices/patientForm/deletePatient";
-import { deletePhotoPatient } from "../../slices/patientForm/deletePhotoPatient";
 import { updatePatient } from "../../slices/patientForm/updatePatient";
+import { closeForm } from "../../slices/patientFormSlice";
 import { fetchPatients } from "../../slices/PatientsSlice";
 import "./PatientForm.css";
-import {
-  initialPatientState,
-  patientReducer,
-} from "../../slices/patientForm/patientReducer";
 
-const PatientForm = () => {
-  const [patient, dispatch] = useReducer(patientReducer, initialPatientState);
-  const fileInput = useRef();
-  const dispatchRedux = useDispatch();
-  const patientFormStatus = useSelector((state) => state.patientForm.status);
-  const loadedPatient = useSelector((state) => state.patientForm.patient);
-  const role = useSelector((state) => state.auth.profile?.role);
-  const canArchive = role === "AD";
-
-  useEffect(() => {
-    if (loadedPatient) {
-      // Заполняем форму данными пациента, если они загружены
-      dispatch({ type: "load", payload: loadedPatient });
-    }
-  }, [loadedPatient]);
-
-  const [selectedImage, setSelectedImage] = useState(null);
-
-  const handleFileChange = (e) => {
-    dispatch({
-      type: "field",
-      fieldName: e.target.name,
-      payload: e.target.files[0],
-    });
-    setSelectedImage(URL.createObjectURL(e.target.files[0]));
-  };
-
-  const handleChange = (e) => {
-    dispatch({
-      type: "field",
-      fieldName: e.target.name,
-      payload: e.target.value,
-    });
-  };
-
-  const currentPage = useSelector((state) => state.patients.currentPage);
-
-  const createPatientData = () => {
-    dispatchRedux(createPatient(patient))
-      .then(() => {
-        dispatchRedux(closeForm()); // Закрываем модальное окно после успешного выполнения
-        dispatchRedux(fetchPatients({ page: 1, filters: {} }));
-        dispatch({ type: "reset" }); // Сбрасываем состояние формы
-      })
-      .catch((error) => {
-        console.error("Ошибка при создании пациента:", error);
-      });
-  };
-  const updatePatientData = () => {
-    dispatchRedux(
-      updatePatient({ ...patient, fileInput, fieldName: "photo" }, dispatch)
-    )
-      .then(() => {
-        dispatchRedux(closeForm()); // Закрываем модальное окно после успешного выполнения
-        dispatchRedux(fetchPatients({ page: currentPage, filters: {} }));
-        dispatch({ type: "reset" }); // Сбрасываем состояние формы
-      })
-      .catch(handleError);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (patientFormStatus === "idle") {
-      if (patient.id) {
-        if (patient.photo && fileInput.current.files[0]) {
-          dispatchRedux(deletePhotoPatient(patient.id))
-            .then(() => {
-              // После успешного удаления фото обновляем пациента
-              updatePatientData();
-            })
-            .catch(handleError);
-        } else {
-          updatePatientData();
-        }
-      } else {
-        createPatientData();
-      }
-    }
-  };
-
-  const archivePatientData = (reason) => {
-    dispatchRedux(archivePatient({ patientId: patient.id, reason }))
-      .then(() => {
-        dispatchRedux(closeForm());
-        dispatchRedux(fetchPatients({ page: currentPage, filters: {} }));
-        dispatch({ type: "reset" });
-      })
-      .catch((error) => console.error("Unable to archive patient:", error));
-  };
-
-  const handleDeletePatient = (e) => {
-    e.preventDefault();
-    if (patientFormStatus === "idle" && canArchive) {
-      if (patient.id) {
-        const reason = window.prompt("Enter the reason for archiving this patient:");
-        if (reason?.trim() && window.confirm("Archive this patient profile?")) {
-          archivePatientData(reason.trim());
-        }
-      }
-    }
-  };
-
-  useEffect(() => {
-    dispatchRedux(fetchPatients({ page: currentPage, filters: {} }));
-  }, [currentPage, dispatchRedux]);
-
-  const handleError = (error) => {
-    console.error("Ошибка при обновлении/создании пациента:", error);
-  };
-
-  return (
-    <Card bg="dark" data-bs-theme="dark">
-      <Card.Body>
-        <Form onSubmit={handleSubmit}>
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={2}>
-              Photo
-            </Form.Label>
-            <Col sm={9}>
-              <Form.Control
-                type="file"
-                name="photo"
-                accept="image/jpeg,image/png,image/webp"
-                ref={fileInput}
-                onChange={handleFileChange}
-              />
-            </Col>
-            <Col sm={1} className="me-auto d-flex justify-content-center">
-              {selectedImage ? (
-                <Card.Img
-                  src={selectedImage}
-                  className="align-self-center my-thumbnail"
-                />
-              ) : loadedPatient?.photo ? (
-                <Card.Img
-                  src={loadedPatient.photo}
-                  className="align-self-center my-thumbnail"
-                />
-              ) : (
-                <></>
-              )}
-            </Col>
-          </Form.Group>
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={3}>
-              First name
-            </Form.Label>
-            <Col sm={9}>
-              <Form.Control
-                type="text"
-                name="first_name"
-                value={patient.first_name}
-                onChange={handleChange}
-                required
-              />
-            </Col>
-          </Form.Group>
-
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={3}>
-              Mid name
-            </Form.Label>
-            <Col sm={9}>
-              <Form.Control
-                type="text"
-                name="middle_name"
-                value={patient.middle_name}
-                onChange={handleChange}
-              />
-            </Col>
-          </Form.Group>
-
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={3}>
-              Last name
-            </Form.Label>
-            <Col sm={9}>
-              <Form.Control
-                type="text"
-                name="last_name"
-                value={patient.last_name}
-                onChange={handleChange}
-                required
-              />
-            </Col>
-          </Form.Group>
-
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={2}>
-              DoB
-            </Form.Label>
-            <Col sm={4}>
-              <Form.Control
-                type="date"
-                name="date_of_birth"
-                value={patient.date_of_birth}
-                onChange={handleChange}
-                max={new Date().toISOString().split("T")[0]}
-                required
-              />
-            </Col>
-            <Form.Label column sm={2}>
-              Gender
-            </Form.Label>
-            <Col sm={4}>
-              <Form.Control
-                as="select"
-                name="gender"
-                value={patient.gender}
-                onChange={handleChange}
-              >
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-                <option value="O">Other</option>
-              </Form.Control>
-            </Col>
-          </Form.Group>
-
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={3}>
-              Address
-            </Form.Label>
-            <Col sm={9}>
-              <Form.Control
-                type="text"
-                name="address"
-                value={patient.address}
-                onChange={handleChange}
-              />
-            </Col>
-          </Form.Group>
-
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={4}>
-              Phone number
-            </Form.Label>
-            <Col sm={8}>
-              <Form.Control
-                type="tel"
-                name="phone_number"
-                value={patient.phone_number}
-                onChange={handleChange}
-              />
-            </Col>
-          </Form.Group>
-
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label column sm={4}>
-              Email
-            </Form.Label>
-            <Col sm={8}>
-              <Form.Control
-                type="email"
-                name="email"
-                value={patient.email}
-                onChange={handleChange}
-              />
-            </Col>
-          </Form.Group>
-          <Form.Group as={Row} className="mb-3 justify-content-md-center">
-            <Col sm={6}>
-              <Button variant="primary" type="submit" className="my-button">
-                Submit
-              </Button>
-            </Col>
-            {canArchive && patient.id && (
-              <Col sm={6}>
-                <Button
-                  variant="warning"
-                  type="button"
-                  onClick={handleDeletePatient}
-                  className="my-button"
-                >
-                  Archive patient
-                </Button>
-              </Col>
-            )}
-          </Form.Group>
-        </Form>
-      </Card.Body>
-    </Card>
-  );
+const blankPatient = {
+  matric_number: "",
+  department: "",
+  first_name: "",
+  middle_name: "",
+  last_name: "",
+  date_of_birth: "",
+  gender: "F",
+  address: "",
+  phone_number: "",
+  email: "",
+  next_of_kin: "",
+  emergency_contact: "",
 };
 
-export default PatientForm;
+export default function PatientForm() {
+  const dispatch = useDispatch();
+  const fileInput = useRef(null);
+  const loadedPatient = useSelector((state) => state.patientForm.patient);
+  const formMode = useSelector((state) => state.patientForm.formMode);
+  const status = useSelector((state) => state.patientForm.status);
+  const currentPage = useSelector((state) => state.patients.currentPage);
+  const role = useSelector((state) => state.auth.profile?.role);
+  const [form, setForm] = useState(blankPatient);
+  const [preview, setPreview] = useState("");
+  const [error, setError] = useState("");
+  const canArchive = role === "AD";
+  const editing = formMode === "edit" && Boolean(loadedPatient?.id);
+
+  useEffect(() => {
+    setForm(editing ? { ...blankPatient, ...loadedPatient } : blankPatient);
+    setPreview(editing ? loadedPatient.photo || "" : "");
+    setError("");
+  }, [editing, loadedPatient]);
+
+  useEffect(() => () => {
+    if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  const change = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+
+  const changePhoto = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (preview.startsWith("blob:")) URL.revokeObjectURL(preview);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError("");
+    try {
+      if (editing) {
+        await dispatch(updatePatient({ ...form, fileInput, fieldName: "photo" })).unwrap();
+      } else {
+        const patient = { ...form };
+        if (fileInput.current?.files[0]) patient.photo = fileInput.current.files[0];
+        await dispatch(createPatient(patient)).unwrap();
+      }
+      await dispatch(fetchPatients({ page: editing ? currentPage : 1, filters: {} }));
+      dispatch(closeForm());
+    } catch (requestError) {
+      setError(typeof requestError === "string" ? requestError : "The patient profile could not be saved.");
+    }
+  };
+
+  const archive = async () => {
+    if (!editing || !canArchive) return;
+    const reason = window.prompt("Enter the reason for archiving this patient:");
+    if (!reason?.trim() || !window.confirm("Archive this patient profile?")) return;
+    setError("");
+    try {
+      await dispatch(archivePatient({ patientId: loadedPatient.id, reason: reason.trim() })).unwrap();
+      await dispatch(fetchPatients({ page: currentPage, filters: {} }));
+      dispatch(closeForm());
+    } catch (requestError) {
+      setError(typeof requestError === "string" ? requestError : "The patient could not be archived.");
+    }
+  };
+
+  const field = (name, label, options = {}) => (
+    <Form.Group as={Col} md={options.wide ? 12 : 6} className="mb-3" controlId={`patient-${name}`}>
+      <Form.Label>{label}</Form.Label>
+      <Form.Control
+        type={options.type || "text"}
+        name={name}
+        value={form[name] || ""}
+        onChange={change}
+        required={options.required}
+        max={options.max}
+        maxLength={options.maxLength}
+        placeholder={options.placeholder}
+      />
+    </Form.Group>
+  );
+
+  return (
+    <Form onSubmit={submit} className="patient-form-shell">
+      {error && <div className="patient-form-error" role="alert">{error}</div>}
+      <Row>
+        <Form.Group as={Col} md={12} className="mb-3">
+          <Form.Label>Patient photograph</Form.Label>
+          <div className="patient-photo-input">
+            {preview && <img src={preview} alt="Patient preview" />}
+            <Form.Control type="file" name="photo" accept="image/jpeg,image/png,image/webp" ref={fileInput} onChange={changePhoto} />
+          </div>
+        </Form.Group>
+        {field("matric_number", "Student or hospital number", { maxLength: 20 })}
+        {field("department", "Department", { maxLength: 150 })}
+        {field("first_name", "First name", { required: true, maxLength: 100 })}
+        {field("middle_name", "Middle name", { maxLength: 100 })}
+        {field("last_name", "Last name", { required: true, maxLength: 100 })}
+        <Form.Group as={Col} md={6} className="mb-3" controlId="patient-gender">
+          <Form.Label>Gender</Form.Label>
+          <Form.Select name="gender" value={form.gender} onChange={change}>
+            <option value="F">Female</option><option value="M">Male</option><option value="O">Other</option>
+          </Form.Select>
+        </Form.Group>
+        {field("date_of_birth", "Date of birth", { type: "date", required: true, max: new Date().toISOString().slice(0, 10) })}
+        {field("phone_number", "Phone number", { type: "tel", maxLength: 11, placeholder: "08012345678" })}
+        {field("email", "Email", { type: "email" })}
+        {field("next_of_kin", "Next of kin", { maxLength: 200 })}
+        {field("emergency_contact", "Emergency contact", { type: "tel", maxLength: 11, placeholder: "08012345678" })}
+        {field("address", "Address", { wide: true, maxLength: 200 })}
+      </Row>
+      <div className="patient-form-actions">
+        {canArchive && editing && <Button type="button" variant="outline-warning" onClick={archive} disabled={status === "loading"}><RiArchiveLine /> Archive</Button>}
+        <Button type="submit" disabled={status === "loading"}>{status === "loading" ? <Spinner size="sm" /> : <RiSaveLine />} {editing ? "Save changes" : "Register patient"}</Button>
+      </div>
+    </Form>
+  );
+}

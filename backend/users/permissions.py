@@ -85,6 +85,15 @@ class CanManageAppointments(IsNurseReceptionistOrAdmin):
     pass
 
 
+class CanUpdateAppointmentStatus(ClinicRolePermission):
+    allowed_roles = (
+        Role.ROLE_DOCTOR,
+        Role.ROLE_NURSE,
+        Role.ROLE_RECEPTIONIST,
+        Role.ROLE_ADMIN,
+    )
+
+
 class CanEditClinicalRecords(IsDoctorOrAdmin):
     pass
 

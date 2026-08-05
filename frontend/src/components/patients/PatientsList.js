@@ -1,145 +1,76 @@
 import React, { useEffect, useState } from "react";
-import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
-import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
-import ListGroup from "react-bootstrap/ListGroup";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { fetchPatients, setCurrentPage } from "../../slices/PatientsSlice.js";
-import { openForm, closeForm } from "../../slices/patientFormSlice.js";
+import { closeForm, openCreateForm, openEditForm } from "../../slices/patientFormSlice.js";
 import { loadPatient } from "../../slices/patientForm/loadPatient.js";
 import PatientForm from "./PatientForm.js";
-import { PAGE_SIZE } from "../../api/apiConfig.js";
-import { RiEdit2Line } from "react-icons/ri";
+import { RiAddLine, RiEdit2Line, RiSearchLine, RiUserHeartLine } from "react-icons/ri";
 import "./Patients.css";
 import PaginationComponent from "../pagination/PaginationComponent.js";
 
 const PatientsList = () => {
   const currentPage = useSelector((state) => state.patients.currentPage);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const patients = useSelector((state) => state.patients.patients);
   const totalPages = useSelector((state) => state.patients.totalPages);
   const showForm = useSelector((state) => state.patientForm.showForm);
-  const [filters, setFilters] = useState({});
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const formMode = useSelector((state) => state.patientForm.formMode);
+  const selectedPatientId = useSelector((state) => state.patientForm.patient?.id);
+  const status = useSelector((state) => state.patients.status);
+  const error = useSelector((state) => state.patients.error);
+  const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const role = useSelector((state) => state.auth.profile?.role);
   const canManagePatients = ["AD", "NS", "RC"].includes(role);
 
-  const handleFilterChange = (event) => {
-    setFilters({
-      ...filters,
-      [event.target.name]: event.target.value,
-    });
-  };
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setAppliedSearch(search.trim());
+      dispatch(setCurrentPage(1));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [dispatch, search]);
 
   useEffect(() => {
-    dispatch(fetchPatients({ page: currentPage, filters: filters }));
-  }, [dispatch, currentPage, filters]);
+    dispatch(fetchPatients({
+      page: currentPage,
+      filters: appliedSearch ? { search: appliedSearch } : {},
+    }));
+  }, [dispatch, currentPage, appliedSearch]);
+
+  const selectPatient = (patient) => navigate(`/patients/${patient.id}`);
+
+  const editPatient = async (patient) => {
+    await dispatch(loadPatient(patient.id)).unwrap();
+    dispatch(openEditForm());
+  };
 
   return (
-    <Card className="card-height">
-      <ListGroup variant="flush" className="card-content">
-        <ListGroup.Item>
-          <Form>
-            <Form.Group as={Row} className="mb-1" controlId="nameFilter">
-              <Col sm="6">
-                <Form.Control
-                  type="text"
-                  name="first_name"
-                  placeholder="First name"
-                  onChange={handleFilterChange}
-                />
-              </Col>
-              <Col sm="6">
-                <Form.Control
-                  type="text"
-                  name="last_name"
-                  placeholder="Last name"
-                  onChange={handleFilterChange}
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row} className="mb-1" controlId="dateFilter">
-              <Col sm="12">
-                <Form.Control
-                  type="date"
-                  name="date_of_birth"
-                  onChange={handleFilterChange}
-                />
-              </Col>
-            </Form.Group>
-          </Form>
-          <Table striped bordered hover>
-            <thead>
-              <tr>
-                <th colSpan="3">
-                  {canManagePatients && (
-                    <Button
-                      className="my-button"
-                      onClick={() => dispatch(openForm())}
-                    >
-                      Add patient
-                    </Button>
-                  )}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((patient, index) => (
-                <tr key={patient.id}>
-                  <td>{(currentPage - 1) * PAGE_SIZE + index + 1}</td>
-                  <td
-                    className={`patient-profile ${
-                      patient.id === selectedPatientId ? "selected" : ""
-                    }`}
-                    onClick={() => {
-                      dispatch(loadPatient(patient.id));
-                      setSelectedPatientId(patient.id);
-                    }}
-                  >
-                    {patient.first_name} {patient.middle_name}{" "}
-                    {patient.last_name}, {patient.date_of_birth}
-                  </td>
-                  <td>
-                    {canManagePatients && (
-                      <Button
-                        variant="link"
-                        aria-label={`Edit ${patient.first_name} ${patient.last_name}`}
-                        onClick={() => {
-                          dispatch(loadPatient(patient.id));
-                          dispatch(openForm());
-                          setSelectedPatientId(patient.id);
-                        }}
-                      >
-                        <RiEdit2Line />
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </ListGroup.Item>
-        <ListGroup.Item>
-          <PaginationComponent
-            currentPage={currentPage}
-            totalPages={totalPages}
-            setCurrentPage={setCurrentPage}
-          />
-        </ListGroup.Item>
-        <Modal show={showForm} onHide={() => dispatch(closeForm())}>
-          <Modal.Header closeButton>
-            <Modal.Title>Change patient profile</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <PatientForm />
-          </Modal.Body>
-        </Modal>
-      </ListGroup>
-    </Card>
+    <aside className="patient-directory">
+      <header><div><span>Patient directory</span><strong>{patients.length} on this page</strong></div>{canManagePatients && <Button className="icon-command" aria-label="Register patient" title="Register patient" onClick={() => dispatch(openCreateForm())}><RiAddLine /></Button>}</header>
+      <div className="patient-search"><RiSearchLine /><Form.Control value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, matric number or phone" aria-label="Search patients" /></div>
+      <div className="patient-directory-results" aria-live="polite">
+        {status === "loading" && <div className="directory-state">Loading patients...</div>}
+        {status === "failed" && <div className="directory-state error">{error || "Patients could not be loaded."}</div>}
+        {status === "succeeded" && patients.length === 0 && <div className="directory-state"><RiUserHeartLine /> No matching patients</div>}
+        {patients.map((patient) => (
+          <div key={patient.id} className={`patient-directory-row ${patient.id === selectedPatientId ? "selected" : ""}`}>
+            <button type="button" onClick={() => selectPatient(patient)}><strong>{patient.first_name} {patient.middle_name} {patient.last_name}</strong><span>{patient.matric_number || patient.uuid}</span><small>{new Date(patient.date_of_birth).toLocaleDateString()} · {patient.gender}</small></button>
+            {canManagePatients && <Button variant="link" className="icon-command" aria-label={`Edit ${patient.first_name} ${patient.last_name}`} title="Edit patient" onClick={() => editPatient(patient)}><RiEdit2Line /></Button>}
+          </div>
+        ))}
+      </div>
+      <div className="patient-directory-pagination"><PaginationComponent currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} /></div>
+      <Modal show={showForm} onHide={() => dispatch(closeForm())} size="lg" centered>
+        <Modal.Header closeButton><Modal.Title>{formMode === "edit" ? "Edit patient profile" : "Register patient"}</Modal.Title></Modal.Header>
+        <Modal.Body><PatientForm /></Modal.Body>
+      </Modal>
+    </aside>
   );
 };
 

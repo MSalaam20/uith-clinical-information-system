@@ -13,6 +13,8 @@ import {
   RiUser3Line,
   RiDashboard3Line,
   RiStethoscopeLine,
+  RiAdminLine,
+  RiFileSearchLine,
 } from "react-icons/ri";
 import LoginForm from "../login/LoginForm";
 import "./Header.css";
@@ -36,6 +38,7 @@ function Header() {
   const profileState = useSelector((state) => state.auth.profile);
   const profile = profileState;
   const isStudent = profile?.role === "PT";
+  const isAdministrator = profile?.role === "AD";
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showLogin, setShowLogin] = useState(false);
@@ -120,6 +123,12 @@ function Header() {
                         <RiStethoscopeLine />
                         ICD-11
                       </Nav.Link>
+                    </>
+                  )}
+                  {isAdministrator && (
+                    <>
+                      <Nav.Link as={Link} to="/staff"><RiAdminLine /> Staff</Nav.Link>
+                      <Nav.Link as={Link} to="/audit-logs"><RiFileSearchLine /> Audit log</Nav.Link>
                     </>
                   )}
                 </>
