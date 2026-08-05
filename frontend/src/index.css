@@ -1,0 +1,20 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #f8fafc;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
+    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+}

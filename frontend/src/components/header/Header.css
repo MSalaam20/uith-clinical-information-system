@@ -1,0 +1,213 @@
+.clinic-navbar {
+  background: linear-gradient(135deg, #ffffff 0%, #fffdf8 100%);
+  border-bottom: 1px solid rgba(31, 41, 55, 0.1);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  min-height: 76px;
+  padding: 0.75rem 1rem;
+}
+
+.clinic-navbar .container-fluid {
+  gap: 1.25rem;
+}
+
+.clinic-navbar-toggle {
+  border-color: rgba(31, 41, 55, 0.18);
+  background: rgba(31, 41, 55, 0.04);
+}
+
+.clinic-navbar-toggle:focus {
+  box-shadow: 0 0 0 0.2rem rgba(197, 155, 71, 0.18);
+}
+
+.uith-brand {
+  align-items: center;
+  color: #1f2937 !important;
+  display: flex;
+  gap: 0.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  margin-right: 1.25rem;
+}
+
+.uith-brand:hover {
+  color: #111827 !important;
+}
+
+.uith-brand small {
+  color: #6b7280;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-top: 0.18rem;
+  text-transform: uppercase;
+}
+
+.hospital-badge {
+  align-items: center;
+  background: rgba(197, 155, 71, 0.14);
+  border: 1px solid rgba(197, 155, 71, 0.35);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.hospital-badge svg {
+  fill: #b8860b;
+  height: 34px;
+  width: 34px;
+}
+
+.hospital-badge-shield {
+  fill: rgba(197, 155, 71, 0.18);
+  stroke: #c59b47;
+  stroke-width: 2;
+}
+
+.clinic-nav-links {
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.clinic-nav-links .nav-link,
+.clinic-nav-links .dropdown-toggle {
+  align-items: center;
+  border-radius: 999px;
+  color: #1f2937 !important;
+  display: inline-flex;
+  font-size: 0.94rem;
+  font-weight: 650;
+  gap: 0.42rem;
+  padding: 0.65rem 0.85rem !important;
+  transition: all 180ms ease;
+}
+
+.clinic-nav-links .nav-link svg,
+.clinic-nav-links .dropdown-toggle svg {
+  color: #b8860b;
+  font-size: 1.2rem;
+}
+
+.clinic-nav-links .nav-link:hover,
+.clinic-nav-links .dropdown-toggle:hover,
+.clinic-nav-links .nav-link:focus,
+.clinic-nav-links .dropdown-toggle:focus {
+  background: rgba(197, 155, 71, 0.12);
+  color: #111827 !important;
+  transform: translateY(-1px);
+}
+
+.clinic-nav-links .dropdown-menu {
+  border: 1px solid rgba(197, 155, 71, 0.2);
+  border-radius: 14px;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
+  margin-top: 0.75rem;
+}
+
+.clinic-auth-nav {
+  align-items: center;
+}
+
+.clinic-login-button,
+.clinic-user-chip {
+  align-items: center;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 0.5rem;
+  justify-content: center;
+  transition: all 180ms ease;
+  white-space: nowrap;
+}
+
+.clinic-login-button {
+  background: linear-gradient(135deg, #c59b47, #b8860b);
+  border: 1px solid rgba(184, 134, 11, 0.28);
+  box-shadow: 0 12px 24px rgba(184, 134, 11, 0.24);
+  color: #ffffff !important;
+  padding: 0.72rem 1rem;
+}
+
+.clinic-login-button:hover {
+  background: linear-gradient(135deg, #b8860b, #8b6510);
+  transform: translateY(-1px);
+}
+
+.clinic-login-button svg,
+.clinic-user-chip svg {
+  font-size: 1.25rem;
+}
+
+.clinic-user-chip {
+  background: rgba(197, 155, 71, 0.12);
+  border: 1px solid rgba(197, 155, 71, 0.28);
+  color: #1f2937 !important;
+  font-size: 0.88rem;
+  gap: 0.38rem;
+  padding: 0.5rem 0.78rem;
+}
+
+.clinic-user-chip:hover {
+  background: rgba(197, 155, 71, 0.2);
+  border-color: rgba(184, 134, 11, 0.42);
+}
+
+.clinic-login-card {
+  border: 1px solid rgba(197, 155, 71, 0.22);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+}
+
+.clinic-login-submit {
+  background: linear-gradient(135deg, #c59b47, #b8860b) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 12px 24px rgba(184, 134, 11, 0.24);
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  padding: 0.72rem 1.1rem !important;
+}
+
+.clinic-login-submit:hover,
+.clinic-login-submit:focus {
+  background: linear-gradient(135deg, #b8860b, #8b6510) !important;
+  box-shadow: 0 16px 30px rgba(184, 134, 11, 0.3);
+}
+
+.clinic-login-modal .modal-content {
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.clinic-login-modal .modal-header {
+  background: linear-gradient(135deg, #fffdf8, #fff7e8);
+  border-bottom: 2px solid rgba(197, 155, 71, 0.24);
+  color: #1f2937;
+}
+
+.clinic-login-modal .modal-body {
+  background: #ffffff;
+}
+
+@media (max-width: 991px) {
+  .clinic-navbar .navbar-collapse {
+    padding-top: 1rem;
+  }
+
+  .clinic-auth-nav {
+    align-items: stretch;
+    padding-top: 0.75rem;
+  }
+
+  .clinic-login-button,
+  .clinic-user-chip {
+    width: 100%;
+  }
+}

@@ -1,0 +1,33 @@
+# Secrets and local environments
+.env
+.env.local
+.env.*.local
+.venv/
+venv/
+env/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*.log
+.coverage
+coverage/
+htmlcov/
+
+# Django runtime data
+backend/debug.log
+backend-runserver.out.log
+backend-runserver.err.log
+media/
+*.sqlite3
+*.sql
+
+# Frontend generated files
+frontend/node_modules/
+frontend/build/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+

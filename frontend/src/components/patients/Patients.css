@@ -1,0 +1,25 @@
+.patient-profile {
+  cursor: pointer;
+}
+.my-button {
+  width: 100%;
+}
+.card-name {
+  font-weight: bold;
+  margin-left: 2px;
+  color: Linen;
+}
+.card-height {
+  height: 92vh;
+}
+.card-content {
+  overflow: auto;
+}
+.patient-profile.selected {
+  background-color: #7491ad; /* Цвет фона для выбранного пациента */
+  color: #0e0130; /* Цвет текста для выбранного пациента */
+}
+.image-card {
+  width: 33%;
+  margin: 1px;
+}

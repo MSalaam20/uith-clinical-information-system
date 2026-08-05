@@ -1,0 +1,91 @@
+.clinic-dashboard-workspace {
+  min-height: calc(100vh - 170px);
+  padding: 2rem 0 3rem;
+}
+
+.dashboard-welcome-panel {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(14, 165, 233, 0.18);
+  border-left: 5px solid #0ea5e9;
+  border-radius: 22px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+}
+
+.dashboard-title-icon,
+.dashboard-module-icon {
+  align-items: center;
+  background: #e0f2fe;
+  border-radius: 18px;
+  color: #0284c7;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.dashboard-title-icon {
+  flex: 0 0 auto;
+  font-size: 2rem;
+  height: 64px;
+  width: 64px;
+}
+
+.dashboard-kicker {
+  color: #0284c7;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.dashboard-welcome-panel h1 {
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 900;
+  margin-bottom: 0.35rem;
+}
+
+.dashboard-welcome-panel p:last-child {
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+.dashboard-module-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-module-card .card-body {
+  padding: 1.35rem;
+}
+
+.dashboard-module-icon {
+  font-size: 1.6rem;
+  height: 52px;
+  margin-bottom: 1rem;
+  width: 52px;
+}
+
+.dashboard-module-card h2 {
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.dashboard-module-card p {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .dashboard-welcome-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
