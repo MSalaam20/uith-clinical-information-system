@@ -29,7 +29,9 @@ const LoginForm = ({ onLoginSuccess, portalType = "staff" }) => {
     try {
       const session = await dispatch(login({ username: identifier.trim(), password, portalType })).unwrap();
       onLoginSuccess?.();
-      navigate(session.profile?.must_change_password ? "/change-temporary-password" : "/dashboard");
+      navigate(session.profile?.must_change_password
+        ? "/change-temporary-password"
+        : session.profile?.default_route || "/dashboard");
     } catch (error) {
       setErrorMessage(String(error || "Login failed. Check the account status and credentials."));
     }

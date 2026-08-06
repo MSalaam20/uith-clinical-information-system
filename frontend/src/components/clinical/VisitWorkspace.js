@@ -8,7 +8,6 @@ import Table from "react-bootstrap/Table";
 import {
   RiAddLine,
   RiCheckLine,
-  RiDeleteBinLine,
   RiEdit2Line,
   RiFileTextLine,
   RiHeartPulseLine,
@@ -144,20 +143,6 @@ export default function VisitWorkspace({ patient, data, role, refresh }) {
     setEntryForm(type);
   };
 
-  const deleteDiagnosis = async (diagnosis) => {
-    if (!window.confirm(`Remove diagnosis ${diagnosis.code_snapshot || diagnosis.description}? This action is audited.`)) return;
-    setSaving(true);
-    setError("");
-    try {
-      await clinicalApi.deleteDiagnosis(diagnosis.id);
-      await refresh();
-    } catch (requestError) {
-      setError(apiError(requestError, "The diagnosis could not be removed.").message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="visit-workspace">
       <aside className="visit-list" aria-label="Patient visits">
@@ -212,8 +197,6 @@ export default function VisitWorkspace({ patient, data, role, refresh }) {
               canDiagnose={canDiagnose}
               onEditNote={(note) => openEntry("note", note)}
               onEditDiagnosis={(diagnosis) => openEntry("diagnosis", diagnosis)}
-              onDeleteDiagnosis={deleteDiagnosis}
-              saving={saving}
             />
           </>
         )}
@@ -251,11 +234,11 @@ export default function VisitWorkspace({ patient, data, role, refresh }) {
   );
 }
 
-function VisitClinicalSummary({ visit, profile, canWriteNotes, canDiagnose, onEditNote, onEditDiagnosis, onDeleteDiagnosis, saving }) {
+function VisitClinicalSummary({ visit, profile, canWriteNotes, canDiagnose, onEditNote, onEditDiagnosis }) {
   return (
     <div className="visit-clinical-sections">
       <section><h3>Vital signs</h3>{visit.vital_signs.length ? <Table responsive size="sm" className="clinical-table"><thead><tr><th>Measured</th><th>Temp</th><th>BP</th><th>Pulse</th><th>SpO2</th><th>BMI</th></tr></thead><tbody>{visit.vital_signs.map((vital) => <tr key={vital.id}><td>{new Date(vital.measured_at).toLocaleString()}</td><td>{vital.temperature_c || "-"}</td><td>{vital.systolic_bp && vital.diastolic_bp ? `${vital.systolic_bp}/${vital.diastolic_bp}` : "-"}</td><td>{vital.pulse_bpm || "-"}</td><td>{vital.oxygen_saturation ? `${vital.oxygen_saturation}%` : "-"}</td><td>{vital.bmi || "-"}</td></tr>)}</tbody></Table> : <p className="clinical-inline-empty">No vital signs for this visit.</p>}</section>
-      <section><h3>Diagnoses</h3>{visit.diagnoses.length ? <ul className="clinical-history-list">{visit.diagnoses.map((diagnosis) => <li key={diagnosis.id}><div className="clinical-entry-heading"><strong>{diagnosis.code_snapshot || "Clinical"} | {diagnosis.description}</strong>{canDiagnose && visit.status === "open" && <span className="clinical-entry-actions"><Button variant="link" className="icon-command" aria-label={`Edit diagnosis ${diagnosis.description}`} title="Correct diagnosis" onClick={() => onEditDiagnosis(diagnosis)}><RiEdit2Line /></Button><Button variant="link" className="icon-command danger" aria-label={`Remove diagnosis ${diagnosis.description}`} title="Remove diagnosis" onClick={() => onDeleteDiagnosis(diagnosis)} disabled={saving}><RiDeleteBinLine /></Button></span>}</div><span>{diagnosis.diagnosis_type} | {diagnosis.diagnosed_by_name || "Clinic clinician"}</span></li>)}</ul> : <p className="clinical-inline-empty">No diagnosis recorded.</p>}</section>
+      <section><h3>Diagnoses</h3>{visit.diagnoses.length ? <ul className="clinical-history-list">{visit.diagnoses.map((diagnosis) => <li key={diagnosis.id}><div className="clinical-entry-heading"><strong>{diagnosis.code_snapshot || "Clinical"} | {diagnosis.description}</strong>{canDiagnose && visit.status === "open" && <span className="clinical-entry-actions"><Button variant="link" className="icon-command" aria-label={`Edit diagnosis ${diagnosis.description}`} title="Correct diagnosis" onClick={() => onEditDiagnosis(diagnosis)}><RiEdit2Line /></Button></span>}</div><span>{diagnosis.diagnosis_type} | {diagnosis.diagnosed_by_name || "Clinic clinician"}</span></li>)}</ul> : <p className="clinical-inline-empty">No diagnosis recorded.</p>}</section>
       <section><h3>Clinical notes</h3>{visit.clinical_notes.length ? <ul className="clinical-history-list">{visit.clinical_notes.map((note) => <li key={note.id}><div className="clinical-entry-heading"><strong>{note.note_type}</strong>{canWriteNotes && visit.status === "open" && (profile?.role === "AD" || note.author === profile?.id) && <Button variant="link" className="icon-command" aria-label={`Edit ${note.note_type} note`} title="Edit clinical note" onClick={() => onEditNote(note)}><RiEdit2Line /></Button>}</div><p>{note.note}</p><span>{note.author_name || "Clinic clinician"} | {new Date(note.created_at).toLocaleString()}</span></li>)}</ul> : <p className="clinical-inline-empty">No clinical notes available.</p>}</section>
       <section><h3>Prescriptions</h3>{visit.prescriptions.length ? visit.prescriptions.map((prescription) => <div className="prescription-summary" key={prescription.id}><div><strong>{new Date(prescription.prescribed_at).toLocaleDateString()}</strong><span>{prescription.status} | {prescription.prescribed_by_name || "Prescriber"}</span></div><ul>{prescription.items.map((item) => <li key={item.id}>{item.medication_detail?.name || "Medication"}: {item.dose}, {item.route}, {item.frequency} for {item.duration}</li>)}</ul></div>) : <p className="clinical-inline-empty">No prescriptions for this visit.</p>}</section>
     </div>

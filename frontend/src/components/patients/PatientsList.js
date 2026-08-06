@@ -26,7 +26,7 @@ const PatientsList = () => {
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const role = useSelector((state) => state.auth.profile?.role);
-  const canManagePatients = ["AD", "NS", "RC"].includes(role);
+  const canManagePatients = ["AD", "RC"].includes(role);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

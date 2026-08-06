@@ -8,3 +8,7 @@
 
 No third-party photographic asset was added. The generated hero contains no
 real patient, institution logo, or readable medical information.
+
+The PNG files in `docs/screenshots/` are first-party verification captures of
+the local application. They contain synthetic records only and are not external
+design assets.

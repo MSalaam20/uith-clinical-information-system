@@ -363,10 +363,21 @@ class AccountLifecycleTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @override_settings(SHOW_DEMO_CREDENTIALS=True, DEBUG=True)
+    @patch.dict('os.environ', {'EHR_DEMO_PASSWORD': 'ConfiguredDemoPass123!'})
     def test_demo_credentials_require_explicit_flag(self):
         response = self.client.get('/api/demo-access/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['accounts']), 4)
+        self.assertTrue(all(
+            account['password'] == 'ConfiguredDemoPass123!'
+            for account in response.data['accounts']
+        ))
+
+    @override_settings(SHOW_DEMO_CREDENTIALS=True, DEBUG=True)
+    @patch.dict('os.environ', {}, clear=True)
+    def test_demo_credentials_require_environment_password(self):
+        response = self.client.get('/api/demo-access/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class StudentAccountProvisioningTests(APITestCase):
@@ -463,6 +474,7 @@ class StudentAccountProvisioningTests(APITestCase):
 
 class DemoAccountCommandTests(APITestCase):
     @override_settings(DEBUG=True)
+    @patch.dict('os.environ', {'EHR_DEMO_PASSWORD': 'ConfiguredDemoPass123!'})
     def test_demo_seed_is_idempotent_and_links_synthetic_student(self):
         call_command('seed_demo_accounts', stdout=StringIO())
         call_command('seed_demo_accounts', stdout=StringIO())

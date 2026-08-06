@@ -1,0 +1,13 @@
+flowchart TB
+  AD[Doctor-in-Charge] --> Oversight[Oversee all queues]
+  AD --> Staff[Manage staff and audit]
+  AD --> Correct[Reassign, correct and archive]
+  DC[Doctor] --> Consult[Confirm and start consultation]
+  DC --> Clinical[Document diagnosis and prescription]
+  DC --> Complete[Complete care or request follow-up]
+  NS[Nurse] --> Review[Review submitted intake]
+  NS --> Schedule[Assign doctor and schedule]
+  RC[Receptionist] --> Register[Find or register student]
+  RC --> Intake[Create and submit intake]
+  PT[Student] --> Journey[View own care journey]
+  PT --> Approved[View approved summary and prescription]

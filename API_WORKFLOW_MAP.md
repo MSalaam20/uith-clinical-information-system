@@ -1,29 +1,31 @@
 # EHR API Workflow Map
 
-This map records the contracts used by the React application. All paths are
-relative to `/api/`. The global DRF default is authenticated access; public
-account endpoints opt in to `AllowAny` explicitly.
+All paths are relative to `/api/`. DRF permissions and role-filtered querysets
+are authoritative; frontend route guards are usability controls.
 
-| Workflow | Endpoint | Methods used | Roles and ownership | React consumer |
-|---|---|---|---|---|
-| Portal login | `auth/jwt/create/` | POST | Staff and student portal type must match the profile role | Login form and auth thunk |
-| Current profile | `profile/me/` | GET | Authenticated account only | Auth thunk and protected routing |
-| Dashboard | `dashboard/summary/` | GET | Role-filtered; student values are limited to the linked patient | Dashboard |
-| Patients | `patients/` | GET, POST, PATCH | Staff can search; AD/NS/RC manage demographics; PT sees one linked patient | Patient directory and form |
-| Student account | `patients/{id}/portal-account/` | GET, POST, PATCH via actions | AD/RC only; account is linked to the selected patient | Student account panel |
-| Appointments | `appointments/` and detail actions | GET, POST, PATCH | AD/NS/RC manage; DC/NS/RC/AD change status; PT reads owned appointments | Calendar and patient history |
-| Visits | `visits/` | GET, POST, PATCH | DC/AD mutate open visits; PT reads owned visits | Visit workspace |
-| Vital signs | `vital-signs/` | GET, POST | DC/NS/AD record against open visits; PT reads owned history | Vital form and history |
-| Clinical notes | `clinical-notes/` | GET, POST, PATCH | DC/NS/AD write; only author or AD edits; PT receives patient-visible notes only | Note form and history |
-| ICD terminology | `icd-codes/` | GET | Authenticated read-only curated local ICD-11 subset | Debounced diagnosis search |
-| Diagnoses | `diagnoses/` | GET, POST, PATCH, DELETE | DC/AD mutate open visits; PT reads owned history | Diagnosis form and visit history |
-| Medications | `medications/` | GET, POST, PATCH | Clinic staff read; DC/AD create or edit | Prescription form catalogue |
-| Prescriptions | `prescriptions/` | GET, POST | DC/AD create an atomic prescription with items; PT reads owned history | Prescription form and history |
-| Legacy records | `records/` | GET, POST, PATCH | DC/AD mutate; PT reads linked records | Legacy/custom-record panel |
-| Staff | `staff/` and detail actions | GET, POST, PATCH | AD only | Staff management |
-| Audit logs | `audit-logs/` | GET | AD only, read-only | Audit viewer |
+| Workflow | Endpoint/action | Authorized roles |
+|---|---|---|
+| Portal login | `auth/jwt/create/` | Portal type must match staff or student role |
+| Current profile | `profile/me/` | Authenticated account |
+| Dashboard | `dashboard/summary/` | Role-scoped values for all assigned roles |
+| Patient directory | `patients/` | AD/RC manage; DC sees assigned/treated patients; PT sees own |
+| Student account | `patients/{id}/portal-account/` | AD/RC |
+| Intake list/create | `clinic-intakes/` | Role-scoped list; AD/RC create |
+| Submit | `clinic-intakes/{id}/submit/` | Owning RC or AD |
+| Begin review | `clinic-intakes/{id}/begin-review/` | NS or AD |
+| Available doctors | `clinic-intakes/available-doctors/` | NS or AD |
+| Schedule/reschedule | `clinic-intakes/{id}/schedule/`, `reschedule/` | NS or AD |
+| Confirm/start/attend/complete | intake detail actions | Assigned DC or AD |
+| Reassign/correct/archive | intake detail actions | AD; reason required |
+| Appointments | `appointments/` | Scoped reads; RC request; NS/AD schedule; assigned DC status |
+| Visits | `visits/` | Assigned DC/AD author; PT approved own history |
+| Vital signs | `vital-signs/` | DC/NS/AD create; scoped read |
+| Clinical notes | `clinical-notes/` | DC/NS/AD; PT receives patient-visible notes only |
+| Diagnoses | `diagnoses/` | DC/AD create/correct; ordinary delete returns 405 |
+| Medications/prescriptions | `medications/`, `prescriptions/` | DC/AD clinical authoring |
+| Staff | `staff/` and actions | AD only |
+| Audit | `audit-logs/` | AD only and read-only |
 
-Role codes are `AD` administrator, `DC` doctor, `NS` nurse, `RC`
-receptionist, `CO` coordinator, `PT` student/patient and `US` unassigned.
-Backend queryset filtering and permission classes remain authoritative; hidden
-buttons or navigation links are usability controls, not security boundaries.
+Important error contracts are 401 for missing/expired authentication, 403 for
+forbidden role actions, 404 for ownership-filtered objects, 400 for invalid
+transitions/conflicts, and 405 for ordinary permanent clinical deletion.

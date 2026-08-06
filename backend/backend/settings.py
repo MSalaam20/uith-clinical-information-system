@@ -196,6 +196,7 @@ DEFAULT_FROM_EMAIL = config(
 FRONTEND_URL = config('FRONTEND_URL', default='http://127.0.0.1:3001')
 SHOW_DEMO_CREDENTIALS = env_bool('SHOW_DEMO_CREDENTIALS', default=False)
 ALLOW_DEMO_ACCOUNTS = env_bool('ALLOW_DEMO_ACCOUNTS', default=False)
+ALLOW_DEMO_DATA_PURGE = env_bool('ALLOW_DEMO_DATA_PURGE', default=False)
 
 
 WSGI_APPLICATION = 'backend.wsgi.application'

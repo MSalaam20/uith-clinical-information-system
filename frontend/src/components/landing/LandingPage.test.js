@@ -1,5 +1,5 @@
 import React from "react";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import LandingPage from "./LandingPage";
 import { clinicalApi } from "../../api/clinicalApi";
@@ -21,4 +21,23 @@ test("renders demo credentials returned by the enabled backend flag", async () =
   render(<MemoryRouter><LandingPage /></MemoryRouter>);
   expect(await screen.findByText(/Defence Demo Access/i)).toBeInTheDocument();
   expect(screen.getByText("dr.demo")).toBeInTheDocument();
+});
+
+test("renders the clinic workflow and four synthetic product previews", async () => {
+  clinicalApi.getDemoAccess.mockResolvedValue({ accounts: [] });
+  await act(async () => { render(<MemoryRouter><LandingPage /></MemoryRouter>); });
+  expect(screen.getByRole("heading", { name: "How Care Moves Through the Clinic" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Receptionist Intake" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Nurse Queue" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Doctor Consultation" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Student Journey" })).toBeInTheDocument();
+});
+
+test("care workflow exposes keyboard-focusable stages and updates its detail", async () => {
+  clinicalApi.getDemoAccess.mockResolvedValue({ accounts: [] });
+  await act(async () => { render(<MemoryRouter><LandingPage /></MemoryRouter>); });
+  const doctorStage = screen.getByRole("button", { name: /Doctor Stage 4/i });
+  fireEvent.focus(doctorStage);
+  expect(doctorStage).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByText("Diagnosis and care")).toBeInTheDocument();
 });

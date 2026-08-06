@@ -1,7 +1,8 @@
+import os
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -23,6 +24,12 @@ class Command(BaseCommand):
     help = 'Seed thesis-ready UITH School Complex Clinic data without Faker or mixer.'
 
     def handle(self, *args, **options):
+        self.demo_password = os.environ.get('EHR_DEMO_PASSWORD')
+        if not self.demo_password:
+            raise CommandError(
+                'Set EHR_DEMO_PASSWORD before running this demo-data command.'
+            )
+
         with transaction.atomic():
             organization = self.seed_organization()
             clinic_department = self.seed_department(organization, 'UITH School Complex Clinic')
@@ -36,7 +43,7 @@ class Command(BaseCommand):
 
             doctor_profile = self.seed_staff_profile(
                 username='dr.jeremiah',
-                password='Doctor@123',
+                password=self.demo_password,
                 first_name='Jeremiah',
                 last_name='Adebayo',
                 middle_name='Olufemi',
@@ -51,7 +58,7 @@ class Command(BaseCommand):
 
             nurse_profile = self.seed_staff_profile(
                 username='nurse.fatima',
-                password='Nurse@123',
+                password=self.demo_password,
                 first_name='Fatima',
                 last_name='Suleiman',
                 middle_name='Bilkisu',
@@ -65,7 +72,7 @@ class Command(BaseCommand):
 
             receptionist_profile = self.seed_staff_profile(
                 username='mr.ibrahim',
-                password='Reception@123',
+                password=self.demo_password,
                 first_name='Ibrahim',
                 last_name='Adamu',
                 middle_name='Salisu',
@@ -342,6 +349,11 @@ class Command(BaseCommand):
         bio='',
         medical_field=None,
     ):
+        existing_profile = Profile.objects.filter(user__username=username).first()
+        if existing_profile and not existing_profile.is_demo:
+            raise CommandError(
+                f'Refusing to overwrite non-demo staff account {username!r}.'
+            )
         user, _ = User.objects.update_or_create(
             username=username,
             defaults={
@@ -363,12 +375,18 @@ class Command(BaseCommand):
                 'medical_field': medical_field,
                 'position': position,
                 'departments': department,
+                'is_demo': True,
             },
         )
         return profile
 
     def seed_student_user(self, student):
         username = f"uith_{student['matric_number'].replace('/', '_')}"
+        existing_profile = Profile.objects.filter(user__username=username).first()
+        if existing_profile and not existing_profile.is_demo:
+            raise CommandError(
+                f'Refusing to overwrite non-demo student account {username!r}.'
+            )
         user, _ = User.objects.update_or_create(
             username=username,
             defaults={
@@ -377,7 +395,7 @@ class Command(BaseCommand):
                 'email': student['email'],
             },
         )
-        user.set_password('Student@123')
+        user.set_password(self.demo_password)
         user.save(update_fields=['password', 'first_name', 'last_name', 'email'])
 
         Profile.objects.update_or_create(
@@ -387,11 +405,20 @@ class Command(BaseCommand):
                 'middle_name': student['middle_name'],
                 'phone_number': student['phone_number'],
                 'bio': f"Student patient profile for {student['matric_number']}.",
+                'is_demo': True,
             },
         )
         return user
 
     def seed_patient(self, user, student):
+        existing_patient = Patient.objects.filter(
+            matric_number=student['matric_number']
+        ).first()
+        if existing_patient and not existing_patient.is_demo:
+            raise CommandError(
+                'Refusing to overwrite non-demo patient '
+                f"{student['matric_number']!r}."
+            )
         patient, _ = Patient.objects.update_or_create(
             matric_number=student['matric_number'],
             defaults={
@@ -405,6 +432,7 @@ class Command(BaseCommand):
                 'phone_number': student['phone_number'],
                 'email': student['email'],
                 'department': student['department'],
+                'is_demo': True,
             },
         )
         return patient
@@ -434,27 +462,33 @@ class Command(BaseCommand):
         return appointment
 
     def seed_record(self, patient, specialist, appointment, student):
-        Record.objects.filter(
+        lookup = Record.objects.filter(
             patient=patient,
             findings__patient_matric=student['matric_number'],
             findings__visit_date=appointment.scheduled_for.strftime('%Y-%m-%d %H:%M'),
-        ).delete()
+        ).first()
+        findings = {
+            'patient_matric': student['matric_number'],
+            'patient_department': student['department'],
+            'visit_date': appointment.scheduled_for.strftime('%Y-%m-%d %H:%M'),
+            'chief_complaint': student['chief_complaint'],
+            'investigation': student['investigation'],
+            'diagnosis': student['diagnosis'],
+            'treatment': student['treatment'],
+            'vitals': {
+                'temperature_c': 37.8 if 'malaria' in student['diagnosis'].lower() else 36.9,
+                'blood_pressure': '120/80',
+                'weight_kg': 68,
+            },
+            'notes': student['notes'],
+        }
+        if lookup:
+            lookup.specialist = specialist
+            lookup.findings = findings
+            lookup.save(update_fields=['specialist', 'findings'])
+            return
         Record.objects.create(
             patient=patient,
             specialist=specialist,
-            findings={
-                'patient_matric': student['matric_number'],
-                'patient_department': student['department'],
-                'visit_date': appointment.scheduled_for.strftime('%Y-%m-%d %H:%M'),
-                'chief_complaint': student['chief_complaint'],
-                'investigation': student['investigation'],
-                'diagnosis': student['diagnosis'],
-                'treatment': student['treatment'],
-                'vitals': {
-                    'temperature_c': 37.8 if 'malaria' in student['diagnosis'].lower() else 36.9,
-                    'blood_pressure': '120/80',
-                    'weight_kg': 68,
-                },
-                'notes': student['notes'],
-            },
+            findings=findings,
         )

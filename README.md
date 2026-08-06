@@ -139,15 +139,17 @@ or command history.
 For synthetic development or defence accounts only:
 
 ```powershell
+$env:EHR_DEMO_PASSWORD='<temporary defence password>'
 python manage.py seed_uith_data
-python manage.py seed_demo_accounts
+python manage.py seed_demo_data
 ```
 
-`seed_demo_accounts` is idempotent and is blocked unless `DJANGO_DEBUG=True` or
-`ALLOW_DEMO_ACCOUNTS=True`. The landing page requests credentials from the
-backend only when `SHOW_DEMO_CREDENTIALS=True`; when false, no credential values
-are present in the rendered UI or frontend bundle. Change or remove every demo
-password before any real deployment.
+`seed_demo_data` is idempotent and is blocked unless `DJANGO_DEBUG=True` or
+`ALLOW_DEMO_ACCOUNTS=True`. `seed_demo_accounts` remains as a compatibility
+alias. The landing page requests credentials only when `SHOW_DEMO_CREDENTIALS`
+is true and `EHR_DEMO_PASSWORD` is present in the backend process; otherwise no
+credential values are returned, rendered or bundled. Remove the environment
+value and disable both flags before any real deployment.
 
 ## Frontend setup
 
@@ -191,11 +193,12 @@ backend and frontend. The current profile is always resolved through
 
 | Role | Main authorized behavior |
 |---|---|
-| Administrator | Staff roles, audit logs, all patient/appointment/clinical operations and restricted hard deletion |
-| Doctor | Patient/history viewing, visits, diagnoses, prescriptions and dynamic clinical records |
-| Nurse | Patient viewing/editing, vital signs, nursing notes and permitted appointments |
-| Receptionist | Patient registration/demographics and permitted appointments; no clinical authoring or deletion |
-| Student/patient | Own linked patient, appointments and approved clinical history only |
+| Doctor-in-Charge (`AD`) | Clinic oversight, staff, audit, reassignment, correction, archive and doctor care |
+| Doctor (`DC`) | Assigned queue, consultation, notes, diagnosis, prescription and completion |
+| Nurse (`NS`) | Submitted-intake review, doctor assignment, scheduling and queue status |
+| Receptionist (`RC`) | Student lookup/registration, demographics, intake creation and nursing handoff |
+| Clinical Officer (`CO`) | Restricted operational summary and account access |
+| Student/patient (`PT`) | Own care journey, appointments and approved clinical history only |
 
 The DRF default is `IsAuthenticated`. Public access is explicitly limited to
 authentication endpoints and development API documentation. A denied role gets
@@ -228,6 +231,12 @@ password before ordinary application routes become available.
 | `POST /api/account/password-reset/confirm/` | Token-validated password reset |
 | `GET /api/demo-access/` | Flag-gated synthetic defence credentials |
 | `/api/patients/` | Patient CRUD, search and administrator archive |
+| `/api/clinic-intakes/` | Role-filtered intake state machine and care journey |
+| `POST /api/clinic-intakes/{id}/submit/` | Reception-to-nurse handoff |
+| `POST /api/clinic-intakes/{id}/schedule/` | Nurse doctor assignment and scheduling |
+| `POST /api/clinic-intakes/{id}/confirm/` | Assigned-doctor confirmation |
+| `POST /api/clinic-intakes/{id}/start-consultation/` | Transactional visit creation/opening |
+| `POST /api/clinic-intakes/{id}/complete/` | Doctor completion or follow-up outcome |
 | `/api/patients/{id}/portal-account/` | Administrator/receptionist student account linking |
 | `/api/appointments/` | Appointment CRUD and cancellation |
 | `PATCH /api/appointments/{id}/status/` | Permitted appointment status change |
@@ -253,20 +262,15 @@ Swagger is available at `/swagger/` and Redoc at `/redoc/` when
 The React patient workspace supports the daily workflow without requiring
 Swagger:
 
-1. Sign in through the role-appropriate portal.
-2. Search for or register a patient and open `/patients/{id}`.
-3. Review demographics, visits, vitals, diagnoses, notes, prescriptions,
-   appointments and custom records in separate tabs.
-4. Create or edit an open visit and optionally link an appointment.
-5. Record validated vital signs; BMI is calculated by the backend.
-6. Add or author-correct a clinical or nursing note and explicitly choose
-   whether it is visible in the student portal.
-7. Search the curated ICD-11 subset, add an ICD-linked diagnosis and use its
-   audited correction controls while the visit remains open.
-8. Search, create or edit a medication presentation and create an atomic prescription
-   containing one or more items.
-9. Complete the visit and view the complete history.
-10. Manage calendar appointments according to role.
+1. Reception finds or registers the student and creates a clinic intake.
+2. Reception records the student-reported complaint and submits it to nursing.
+3. Nursing begins review, chooses an available doctor and schedules the visit.
+4. The appointment appears in the nurse calendar, doctor queue and student journey.
+5. The assigned doctor confirms and starts the consultation, opening one linked visit.
+6. The doctor records permitted vitals, notes, ICD-11 diagnosis and prescription.
+7. Completion publishes the approved summary and optional follow-up instructions.
+8. The student sees only their own timeline, appointment and approved clinical output.
+9. A later intake reuses the same patient and account and preserves prior history.
 
 Completed and cancelled visits are read-only through both React controls and
 backend serializers. See `API_WORKFLOW_MAP.md` for the endpoint, role and
@@ -329,14 +333,14 @@ npm.cmd test
 npm.cmd run build
 ```
 
-Latest verified local result (5 August 2026): Django found 68 tests and all 68
-passed in 393.527 seconds; Jest ran 37 tests across 16 suites and all 37
-passed in 34.985 seconds. A clean `npm.cmd ci` and top-level dependency check
-also succeeded. The route-split React build completed successfully with a
-130.58 kB initial JavaScript bundle and 38.25 kB main CSS bundle after
-gzip; operational routes are emitted as on-demand chunks. React Router future-flag
-notices occur in its test harness, and the older CRA toolchain emits a Node
-`fs.F_OK` deprecation notice; neither prevented testing or compilation.
+Latest verified local result (5 August 2026): Django found 78 tests and all 78
+passed in 305.647 seconds; Jest ran 52 tests across 17 suites and all 52 passed
+in 68.416 seconds. The top-level dependency check also succeeded. The
+route-split React build compiled successfully with a 134.6 kB initial
+JavaScript bundle and 38.46 kB main CSS bundle after gzip; operational routes
+are emitted as on-demand chunks. The older CRA toolchain emits a Node
+`fs.F_OK` deprecation notice after compilation; it did not prevent testing or
+the production build.
 
 Docker, when installed:
 
@@ -357,8 +361,8 @@ docker compose build
   endpoints until a validated permanent password is set.
 - Patient access is filtered through the authenticated `User` to `Patient`
   relationship; submitted patient IDs do not override ownership.
-- Patient deletion is not exposed in the normal UI. Archiving requires an
-  administrator and a reason. Permanent API deletion remains administrator-only.
+- Patient and clinical-history deletion is not exposed through ordinary APIs.
+  Doctor-in-Charge archive/correction actions require a reason and are audited.
 - Embedded record images are restricted to JPEG, PNG and WebP, limited to 5 MB,
   assigned generated names and constrained to their record directory.
 - Audit metadata recursively excludes password, token, authorization and secret
@@ -380,8 +384,9 @@ docker compose build
   the current implementation.
 - Docker execution is not verified on this computer because Docker Desktop is
   not installed; local Django, React and MariaDB are the verified path.
-- The automated tests are focused backend and component tests rather than a full
-  Playwright/Cypress browser suite. Follow `DEFENCE_DEMO.md` for the manual path.
+- The role workflow is also exercised in headless Microsoft Edge through the
+  DevTools protocol. Evidence is stored in `docs/BROWSER_VERIFICATION.json` and
+  `docs/screenshots/`; `scripts/browser_verify.mjs` reproduces the checks.
 - `npm audit --omit=dev` currently reports two moderate React Router advisories.
   The available v7 releases overlap with a newer high-severity RSC advisory, so
   the verified v6 line was retained. This client uses no SSR/RSC and no

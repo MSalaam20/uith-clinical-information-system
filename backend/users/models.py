@@ -61,6 +61,7 @@ class Profile(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     must_change_password = models.BooleanField(default=False, db_index=True)
     token_version = models.PositiveIntegerField(default=0)
+    is_demo = models.BooleanField(default=False, db_index=True)
 
     @property
     def is_user(self):

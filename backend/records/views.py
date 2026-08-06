@@ -4,6 +4,7 @@ import shutil
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -17,6 +18,9 @@ from users.models import Role
 from users.permissions import (
     CanEditClinicalRecords,
     CanRecordVitals,
+    CanViewClinicalRecords,
+    CanViewVitals,
+    CanViewAuditLogs,
     CanWriteClinicalNotes,
     IsAdministrator,
     IsAuthenticatedClinicUser,
@@ -87,6 +91,12 @@ class RecordViewSet(viewsets.ModelViewSet):
         )
         if _is_patient_request(self.request):
             queryset = queryset.filter(patient__user=self.request.user)
+        else:
+            profile = _patient_profile(self.request)
+            if profile and profile.role == Role.ROLE_DOCTOR:
+                queryset = queryset.filter(
+                    patient__clinic_intakes__assigned_doctor=profile
+                ).distinct()
         patient_id = self.request.query_params.get('patient_id')
         if patient_id:
             queryset = queryset.filter(patient_id=patient_id)
@@ -94,7 +104,7 @@ class RecordViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'destroy':
-            return [IsAuthenticated(), IsAdministrator()]
+            return [IsAuthenticated(), IsDoctorOrAdmin()]
         if self.action in {'create', 'update', 'partial_update', 'update_findings'}:
             return [IsAuthenticated(), CanEditClinicalRecords()]
         return super().get_permissions()
@@ -174,18 +184,10 @@ class RecordViewSet(viewsets.ModelViewSet):
         )
         return Response(data)
 
-    def perform_destroy(self, instance):
-        record_id = instance.pk
-        directory_path = os.path.join(self.file_path, str(record_id))
-        super().perform_destroy(instance)
-        if os.path.isdir(directory_path):
-            shutil.rmtree(directory_path)
-        log_action(
-            request=self.request,
-            action='record_deleted',
-            resource_type='Record',
-            resource_id=record_id,
-            description='Dynamic clinical record permanently deleted by an administrator.',
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Clinical records use correction workflows and are not permanently deleted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
 
@@ -231,13 +233,32 @@ class PatientOwnedClinicalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        profile = _patient_profile(self.request)
         if _is_patient_request(self.request):
             queryset = queryset.filter(**{self.patient_lookup: self.request.user})
+        elif profile and profile.role == Role.ROLE_DOCTOR:
+            if self.queryset.model is Visit:
+                queryset = queryset.filter(
+                    Q(appointment__intake__assigned_doctor=profile)
+                    | Q(appointment__assigned_doctor=profile)
+                    | Q(created_by=profile)
+                )
+            else:
+                queryset = queryset.filter(
+                    Q(visit__appointment__intake__assigned_doctor=profile)
+                    | Q(visit__appointment__assigned_doctor=profile)
+                )
         patient_id = self.request.query_params.get('patient_id')
         if patient_id:
             lookup = self.patient_lookup.replace('__user', '')
             queryset = queryset.filter(**{f'{lookup}_id': patient_id})
         return queryset
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {'detail': 'Clinical entries are corrected or marked in error, not permanently deleted.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     def audit(self, instance, verb):
         log_action(
@@ -285,7 +306,7 @@ class VisitViewSet(PatientOwnedClinicalViewSet):
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
             return [IsAuthenticated(), CanEditClinicalRecords()]
-        return super().get_permissions()
+        return [IsAuthenticated(), CanViewClinicalRecords()]
 
     def perform_create(self, serializer):
         visit = serializer.save(created_by=_patient_profile(self.request))
@@ -306,7 +327,7 @@ class VitalSignViewSet(PatientOwnedClinicalViewSet):
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
             return [IsAuthenticated(), CanRecordVitals()]
-        return super().get_permissions()
+        return [IsAuthenticated(), CanViewVitals()]
 
     def perform_create(self, serializer):
         vital_sign = serializer.save(recorded_by=_patient_profile(self.request))
@@ -329,7 +350,7 @@ class ClinicalNoteViewSet(PatientOwnedClinicalViewSet):
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
             return [IsAuthenticated(), CanWriteClinicalNotes()]
-        return super().get_permissions()
+        return [IsAuthenticated(), CanViewClinicalRecords()]
 
     def perform_create(self, serializer):
         note = serializer.save(author=_patient_profile(self.request))
@@ -366,7 +387,7 @@ class DiagnosisViewSet(PatientOwnedClinicalViewSet):
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
             return [IsAuthenticated(), CanEditClinicalRecords()]
-        return super().get_permissions()
+        return [IsAuthenticated(), CanViewClinicalRecords()]
 
     def perform_create(self, serializer):
         diagnosis = serializer.save(diagnosed_by=_patient_profile(self.request))
@@ -386,7 +407,7 @@ class PrescriptionViewSet(PatientOwnedClinicalViewSet):
     def get_permissions(self):
         if self.action not in {'list', 'retrieve'}:
             return [IsAuthenticated(), CanEditClinicalRecords()]
-        return super().get_permissions()
+        return [IsAuthenticated(), CanViewClinicalRecords()]
 
     def perform_create(self, serializer):
         prescription = serializer.save(prescribed_by=_patient_profile(self.request))
@@ -453,7 +474,7 @@ class ICDCodeViewSet(viewsets.ReadOnlyModelViewSet):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = AuditLog.objects.select_related('user')
     serializer_class = AuditLogSerializer
-    permission_classes = (IsAuthenticated, IsAdministrator)
+    permission_classes = (IsAuthenticated, CanViewAuditLogs)
     pagination_class = StandardResultsSetPagination
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     filterset_class = AuditLogFilter

@@ -3,6 +3,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from organization.models import Department
+from users.capabilities import role_configuration
 from users.models import Profile, Role
 from users.services import (
     PROVISIONABLE_STAFF_ROLES,
@@ -23,7 +24,10 @@ class ProfileSerializer(serializers.ModelSerializer):
         )
     email = serializers.EmailField(source='user.email', read_only=True)
     is_active = serializers.BooleanField(source='user.is_active', read_only=True)
-    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    role_display = serializers.SerializerMethodField()
+    portal = serializers.SerializerMethodField()
+    default_route = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField()
     medical_field = serializers.StringRelatedField(
         read_only=True
         )
@@ -49,14 +53,33 @@ class ProfileSerializer(serializers.ModelSerializer):
             'position',
             'departments',
             'must_change_password',
+            'is_demo',
+            'portal',
+            'default_route',
+            'capabilities',
             ]
+
+    def _configuration(self, profile):
+        return role_configuration(profile.role)
+
+    def get_role_display(self, profile):
+        return self._configuration(profile).get(
+            'display_name', profile.get_role_display()
+        )
+
+    def get_portal(self, profile):
+        return self._configuration(profile).get('portal')
+
+    def get_default_route(self, profile):
+        return self._configuration(profile).get('default_route', '/dashboard')
+
+    def get_capabilities(self, profile):
+        return sorted(self._configuration(profile).get('capabilities', set()))
 
 
 class StaffUserSerializer(serializers.ModelSerializer):
     role = serializers.CharField(source='user.role', read_only=True)
-    role_display = serializers.CharField(
-        source='user.get_role_display', read_only=True
-    )
+    role_display = serializers.SerializerMethodField()
     phone_number = serializers.CharField(source='user.phone_number', read_only=True)
     department = serializers.StringRelatedField(source='user.departments', read_only=True)
     department_id = serializers.IntegerField(
@@ -73,6 +96,10 @@ class StaffUserSerializer(serializers.ModelSerializer):
             'is_active', 'last_login', 'role', 'role_display', 'phone_number',
             'department', 'department_id', 'must_change_password',
         ]
+
+    def get_role_display(self, user):
+        configuration = role_configuration(user.user.role)
+        return configuration.get('display_name', user.user.get_role_display())
 
 
 class StaffCreateSerializer(serializers.Serializer):

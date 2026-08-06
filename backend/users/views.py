@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -18,7 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from users.models import Profile, Role
-from users.permissions import IsAdministrator
+from users.permissions import CanManageStaff, IsAdministrator
 from users.services import set_temporary_password
 from patients.pagination import StandardResultsSetPagination
 from .authentication import PortalTokenObtainPairSerializer
@@ -66,7 +68,7 @@ class ProfileViewSet(viewsets.ReadOnlyModelViewSet):
 class StaffViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.select_related('user').filter(user__isnull=False)
     serializer_class = StaffUserSerializer
-    permission_classes = (IsAuthenticated, IsAdministrator)
+    permission_classes = (IsAuthenticated, CanManageStaff)
     pagination_class = StandardResultsSetPagination
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     filterset_fields = ('is_active',)
@@ -332,9 +334,12 @@ class DemoAccessView(APIView):
             settings.DEBUG or settings.ALLOW_DEMO_ACCOUNTS
         ):
             return Response(status=status.HTTP_404_NOT_FOUND)
+        password = os.environ.get('EHR_DEMO_PASSWORD')
+        if not password:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         return Response({'accounts': [
-            {'role': 'Doctor', 'portal': 'staff', 'username': 'dr.jeremiah', 'password': 'Doctor@123'},
-            {'role': 'Nurse', 'portal': 'staff', 'username': 'nurse.fatima', 'password': 'Nurse@123'},
-            {'role': 'Receptionist', 'portal': 'staff', 'username': 'mr.ibrahim', 'password': 'Reception@123'},
-            {'role': 'Student', 'portal': 'student', 'username': 'uith_2021_52HL034', 'password': 'Student@123'},
+            {'role': 'Doctor', 'portal': 'staff', 'username': 'dr.jeremiah', 'password': password},
+            {'role': 'Nurse', 'portal': 'staff', 'username': 'nurse.fatima', 'password': password},
+            {'role': 'Receptionist', 'portal': 'staff', 'username': 'mr.ibrahim', 'password': password},
+            {'role': 'Student', 'portal': 'student', 'username': 'uith_2021_52HL034', 'password': password},
         ]})

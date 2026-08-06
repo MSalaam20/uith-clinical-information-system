@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-08-05T23:49:30.448Z",
+  "frontend": "http://127.0.0.1:3001",
+  "checks": [
+    {
+      "step": "Doctor-in-Charge responsive 360px",
+      "passed": true
+    },
+    {
+      "step": "Doctor-in-Charge responsive 390px",
+      "passed": true
+    },
+    {
+      "step": "Doctor-in-Charge responsive 430px",
+      "passed": true
+    },
+    {
+      "step": "Doctor-in-Charge responsive 768px",
+      "passed": true
+    },
+    {
+      "step": "Doctor-in-Charge responsive 1024px",
+      "passed": true
+    },
+    {
+      "step": "Doctor-in-Charge responsive 1440px",
+      "passed": true
+    },
+    {
+      "step": "Doctor-in-Charge login and full navigation",
+      "passed": true
+    },
+    {
+      "step": "Receptionist responsive 360px",
+      "passed": true
+    },
+    {
+      "step": "Receptionist responsive 390px",
+      "passed": true
+    },
+    {
+      "step": "Receptionist responsive 430px",
+      "passed": true
+    },
+    {
+      "step": "Receptionist responsive 768px",
+      "passed": true
+    },
+    {
+      "step": "Receptionist responsive 1024px",
+      "passed": true
+    },
+    {
+      "step": "Receptionist responsive 1440px",
+      "passed": true
+    },
+    {
+      "step": "Receptionist creates and submits intake",
+      "passed": true
+    },
+    {
+      "step": "Student responsive 360px",
+      "passed": true
+    },
+    {
+      "step": "Student responsive 390px",
+      "passed": true
+    },
+    {
+      "step": "Student responsive 430px",
+      "passed": true
+    },
+    {
+      "step": "Student responsive 768px",
+      "passed": true
+    },
+    {
+      "step": "Student responsive 1024px",
+      "passed": true
+    },
+    {
+      "step": "Student responsive 1440px",
+      "passed": true
+    },
+    {
+      "step": "Student sees sent-to-nurse status and ownership guard",
+      "passed": true
+    },
+    {
+      "step": "Nurse responsive 360px",
+      "passed": true
+    },
+    {
+      "step": "Nurse responsive 390px",
+      "passed": true
+    },
+    {
+      "step": "Nurse responsive 430px",
+      "passed": true
+    },
+    {
+      "step": "Nurse responsive 768px",
+      "passed": true
+    },
+    {
+      "step": "Nurse responsive 1024px",
+      "passed": true
+    },
+    {
+      "step": "Nurse responsive 1440px",
+      "passed": true
+    },
+    {
+      "step": "Nurse reviews, assigns doctor and schedules appointment",
+      "passed": true
+    },
+    {
+      "step": "Student sees scheduled appointment",
+      "passed": true
+    },
+    {
+      "step": "Doctor responsive 360px",
+      "passed": true
+    },
+    {
+      "step": "Doctor responsive 390px",
+      "passed": true
+    },
+    {
+      "step": "Doctor responsive 430px",
+      "passed": true
+    },
+    {
+      "step": "Doctor responsive 768px",
+      "passed": true
+    },
+    {
+      "step": "Doctor responsive 1024px",
+      "passed": true
+    },
+    {
+      "step": "Doctor responsive 1440px",
+      "passed": true
+    },
+    {
+      "step": "Doctor confirms, documents and completes consultation",
+      "passed": true
+    },
+    {
+      "step": "Student sees completed care and approved prescription",
+      "passed": true
+    },
+    {
+      "step": "Repeat intake reuses student account and patient",
+      "passed": true
+    },
+    {
+      "step": "Landing page desktop and mobile visual checks",
+      "passed": true
+    }
+  ]
+}

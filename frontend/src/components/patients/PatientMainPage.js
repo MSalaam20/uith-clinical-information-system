@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import PatientWorkspace from "../clinical/PatientWorkspace";
 import PatientsList from "./PatientsList.js";
 import { fetchPatients } from "../../slices/PatientsSlice";
@@ -9,7 +9,6 @@ import "./Patients.css";
 
 const PatientMainPage = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { patientId } = useParams();
   const role = useSelector((state) => state.auth.profile?.role);
   const patients = useSelector((state) => state.patients.patients);
@@ -31,9 +30,9 @@ const PatientMainPage = () => {
 
   useEffect(() => {
     if (isStudent && !patientId && patients.length === 1) {
-      navigate(`/patients/${patients[0].id}`, { replace: true });
+      dispatch(loadPatient(patients[0].id));
     }
-  }, [isStudent, navigate, patientId, patients]);
+  }, [dispatch, isStudent, patientId, patients]);
 
   return (
     <div className={`patient-page-layout ${isStudent ? "student-view" : ""}`}>

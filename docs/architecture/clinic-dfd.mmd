@@ -1,0 +1,14 @@
+flowchart LR
+  Student[Student] -->|details and complaint| Reception[Reception intake]
+  Reception -->|submitted intake| Queue[(Clinic intake and history)]
+  Queue --> Nurse[Nurse review and scheduling]
+  Nurse -->|doctor and appointment| Appointments[(Appointments)]
+  Appointments --> Doctor[Assigned doctor consultation]
+  Doctor --> Records[(Visits and clinical records)]
+  Records -->|approved summary and prescription| Student
+  Charge[Doctor-in-Charge] --> Queue
+  Charge --> Staff[(Staff accounts)]
+  Reception --> Audit[(Audit log)]
+  Nurse --> Audit
+  Doctor --> Audit
+  Charge --> Audit

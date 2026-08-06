@@ -4,6 +4,7 @@ export const LOGIN_ENDPOINT = "auth/jwt/create/";
 export const REFRESH_ENDPOINT = "auth/jwt/refresh/";
 export const PATIENTS = "patients/";
 export const APPOINTMENTS = "appointments/";
+export const CLINIC_INTAKES = "clinic-intakes/";
 export const ME = "auth/users/me/";
 export const PROFILE = "profile/";
 export const PROFILE_ME = "profile/me/";

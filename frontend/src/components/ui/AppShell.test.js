@@ -9,30 +9,22 @@ const renderShell = (role) => {
   const store = configureStore({
     reducer: {
       auth: (state = {
-        profile: {
-          role,
-          role_display: role === "PT" ? "Student patient" : "Administrator",
-          first_name: "Test",
-          last_name: "User",
-          email: "test@example.invalid",
-        },
+        profile: { role, first_name: "Test", last_name: "User", email: "test@example.invalid" },
       }) => state,
     },
   });
   return render(<Provider store={store}><MemoryRouter><AppShell><span>Workspace content</span></AppShell></MemoryRouter></Provider>);
 };
 
-test("student navigation exposes only personal record workflows", () => {
-  renderShell("PT");
-  expect(screen.getByRole("link", { name: /my health record/i })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /my appointments/i })).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /student patients/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /staff management/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /audit log/i })).not.toBeInTheDocument();
-});
-
-test("administrator navigation includes protected management workspaces", () => {
-  renderShell("AD");
-  expect(screen.getByRole("link", { name: /staff management/i })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /audit log/i })).toBeInTheDocument();
+test.each([
+  ["AD", "Clinic Overview", ["Staff Management", "Audit Logs", "System Overview"], []],
+  ["DC", "My Queue", ["Patients", "ICD-11"], ["Staff Management", "Audit Logs"]],
+  ["NS", "Intake Queue", ["Appointments"], ["Patients", "ICD-11", "Staff Management", "Audit Logs"]],
+  ["RC", "New Intake", ["Student Directory", "Today's Intakes"], ["ICD-11", "Staff Management", "Audit Logs"]],
+  ["PT", "My Care Journey", ["My Appointments", "My Health Record"], ["Patients", "Staff Management", "Audit Logs"]],
+])("%s receives a distinct navigation set", (role, primary, included, excluded) => {
+  renderShell(role);
+  expect(screen.getByRole("link", { name: primary })).toBeInTheDocument();
+  included.forEach((label) => expect(screen.getByRole("link", { name: label })).toBeInTheDocument());
+  excluded.forEach((label) => expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument());
 });

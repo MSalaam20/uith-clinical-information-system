@@ -433,7 +433,10 @@ class RecordAndClinicalApiTests(APITestCase):
         self.assertEqual(diagnosis.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(prescription.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(visit_update.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(diagnosis_delete.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            diagnosis_delete.status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
         self.assertTrue(Diagnosis.objects.filter(pk=existing_diagnosis.pk).exists())
 
     def test_student_cannot_retrieve_other_patient_clinical_objects(self):

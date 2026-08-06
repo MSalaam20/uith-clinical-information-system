@@ -159,6 +159,7 @@ class PatientWorkflowTests(APITestCase):
         doctor.user.save(update_fields=['role'])
         appointment = Appointment.objects.create(
             patient=self.patient,
+            assigned_doctor=doctor.user,
             scheduled_for=timezone.now() + timedelta(days=1),
             reason='Review',
         )

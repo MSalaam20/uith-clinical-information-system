@@ -14,9 +14,8 @@ import StatePanel from "./components/ui/StatePanel";
 import { ChangePasswordPage, ForgotPasswordPage, ResetPasswordPage } from "./components/account/PasswordPages";
 import { AUTH_EXPIRED_EVENT } from "./api/authSession";
 import { authSessionExpired } from "./slices/AuthSlice";
+import { rolesForRoute } from "./config/roleCapabilities";
 import "./styles/operational.css";
-
-const staffRoles = ["AD", "DC", "NS", "RC", "CO"];
 
 const LandingPage = lazy(() => import("./components/landing/LandingPage"));
 const Dashboard = lazy(() => import("./components/dashboard/Dashboard"));
@@ -26,6 +25,12 @@ const ICD = lazy(() => import("./components/icd/ICD"));
 const Setup = lazy(() => import("./components/setup/Setup"));
 const StaffManagement = lazy(() => import("./components/admin/StaffManagement"));
 const AuditLogViewer = lazy(() => import("./components/admin/AuditLogViewer"));
+const ReceptionIntake = lazy(() => import("./components/workflow/ReceptionIntake"));
+const ReceptionIntakes = lazy(() => import("./components/workflow/ReceptionIntakes"));
+const NurseQueue = lazy(() => import("./components/workflow/NurseQueue"));
+const DoctorQueue = lazy(() => import("./components/workflow/DoctorQueue"));
+const CareJourney = lazy(() => import("./components/workflow/CareJourney"));
+const ClinicOverview = lazy(() => import("./components/workflow/ClinicOverview"));
 
 const App = () => {
   const dispatch = useDispatch();
@@ -61,15 +66,26 @@ const App = () => {
             <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/change-temporary-password" element={protectedPage(<ChangePasswordPage temporary />, null, false)} />
             <Route path="/change-password" element={protectedPage(<ChangePasswordPage />)} />
-            <Route path="/dashboard" element={protectedPage(<Dashboard />)} />
-            <Route path="/patients" element={protectedPage(<PatientMainPage />)} />
-            <Route path="/patients/:patientId" element={protectedPage(<PatientMainPage />)} />
-            <Route path="/icd" element={protectedPage(<ICD />, staffRoles)} />
-            <Route path="/icd-11" element={protectedPage(<ICD />, staffRoles)} />
-            <Route path="/today-schedule" element={protectedPage(<TodaySchedule />)} />
-            <Route path="/setup" element={protectedPage(<Setup />, staffRoles)} />
-            <Route path="/staff" element={protectedPage(<StaffManagement />, ["AD"])} />
-            <Route path="/audit-logs" element={protectedPage(<AuditLogViewer />, ["AD"])} />
+            <Route path="/dashboard" element={protectedPage(<Dashboard />, rolesForRoute("/dashboard"))} />
+            <Route path="/clinic-overview" element={protectedPage(<ClinicOverview />, rolesForRoute("/clinic-overview"))} />
+            <Route path="/intakes" element={protectedPage(<ClinicOverview />, rolesForRoute("/intakes"))} />
+            <Route path="/doctor-queue" element={protectedPage(<DoctorQueue />, rolesForRoute("/doctor-queue"))} />
+            <Route path="/nurse-queue" element={protectedPage(<NurseQueue />, rolesForRoute("/nurse-queue"))} />
+            <Route path="/reception/intake" element={protectedPage(<ReceptionIntake />, rolesForRoute("/reception/intake"))} />
+            <Route path="/reception/intakes" element={protectedPage(<ReceptionIntakes />, rolesForRoute("/reception/intakes"))} />
+            <Route path="/my-care" element={protectedPage(<CareJourney />, rolesForRoute("/my-care"))} />
+            <Route path="/patients" element={protectedPage(<PatientMainPage />, rolesForRoute("/patients"))} />
+            <Route path="/patients/:patientId" element={protectedPage(<PatientMainPage />, rolesForRoute("/patients"))} />
+            <Route path="/my-health-record" element={protectedPage(<PatientMainPage />, rolesForRoute("/my-health-record"))} />
+            <Route path="/icd" element={protectedPage(<ICD />, rolesForRoute("/icd"))} />
+            <Route path="/icd-11" element={protectedPage(<ICD />, rolesForRoute("/icd-11"))} />
+            <Route path="/today-schedule" element={protectedPage(<TodaySchedule />, rolesForRoute("/today-schedule"))} />
+            <Route path="/appointments" element={protectedPage(<TodaySchedule />, rolesForRoute("/appointments"))} />
+            <Route path="/my-appointments" element={protectedPage(<TodaySchedule />, rolesForRoute("/my-appointments"))} />
+            <Route path="/setup" element={protectedPage(<Setup />, rolesForRoute("/setup"))} />
+            <Route path="/staff" element={protectedPage(<StaffManagement />, rolesForRoute("/staff"))} />
+            <Route path="/audit-logs" element={protectedPage(<AuditLogViewer />, rolesForRoute("/audit-logs"))} />
+            <Route path="/account" element={protectedPage(<ChangePasswordPage />, rolesForRoute("/account"))} />
             <Route path="/unauthorized" element={protectedPage(<StatePanel icon={<RiShieldKeyholeLine />} title="Access not available" message="Your clinic role does not include this workspace."><Button as={Link} to="/dashboard"><RiHome4Line /> Return to dashboard</Button></StatePanel>)} />
             <Route path="*" element={<main className="standalone-state"><StatePanel icon={<RiErrorWarningLine />} title="Page not found" message="The address does not match an available clinic page."><Button as={Link} to={isAuthenticated ? "/dashboard" : "/"}><RiHome4Line /> Go home</Button></StatePanel></main>} />
           </Routes>

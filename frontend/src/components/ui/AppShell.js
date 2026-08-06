@@ -4,40 +4,44 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   RiAdminLine,
+  RiAccountCircleLine,
   RiCalendarLine,
   RiCloseLine,
   RiDashboard3Line,
   RiFileSearchLine,
+  RiFlowChart,
   RiHeartPulseLine,
   RiLockPasswordLine,
   RiLogoutCircleRLine,
   RiMenuLine,
   RiSettingsLine,
   RiStethoscopeLine,
+  RiTeamLine,
+  RiUserAddLine,
   RiUser3Line,
 } from "react-icons/ri";
 import { logout } from "../../slices/authForm/logout";
+import { roleConfig } from "../../config/roleCapabilities";
 import "./AppShell.css";
 
-const navigation = {
-  PT: [
-    ["/dashboard", "Dashboard", RiDashboard3Line],
-    ["/patients", "My health record", RiHeartPulseLine],
-    ["/today-schedule", "My appointments", RiCalendarLine],
-  ],
-  default: [
-    ["/dashboard", "Dashboard", RiDashboard3Line],
-    ["/patients", "Student patients", RiUser3Line],
-    ["/today-schedule", "Appointments", RiCalendarLine],
-    ["/icd-11", "ICD-11 subset", RiStethoscopeLine],
-    ["/setup", "Clinic setup", RiSettingsLine],
-  ],
+const icons = {
+  dashboard: RiDashboard3Line,
+  overview: RiFlowChart,
+  intakes: RiUserAddLine,
+  patients: RiUser3Line,
+  appointments: RiCalendarLine,
+  doctor: RiStethoscopeLine,
+  nurse: RiHeartPulseLine,
+  staff: RiTeamLine,
+  audit: RiFileSearchLine,
+  icd: RiStethoscopeLine,
+  settings: RiSettingsLine,
+  account: RiAccountCircleLine,
+  history: RiFileSearchLine,
+  journey: RiFlowChart,
+  clinical: RiHeartPulseLine,
+  admin: RiAdminLine,
 };
-
-const adminNavigation = [
-  ["/staff", "Staff management", RiAdminLine],
-  ["/audit-logs", "Audit log", RiFileSearchLine],
-];
 
 const ClinicMark = () => <span className="clinic-mark" aria-hidden="true">+</span>;
 
@@ -46,10 +50,8 @@ export default function AppShell({ children }) {
   const profile = useSelector((state) => state.auth.profile);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const roleNavigation = profile?.role === "PT" ? navigation.PT : navigation.default;
-  const links = profile?.role === "AD"
-    ? [...roleNavigation, ...adminNavigation]
-    : roleNavigation;
+  const configuration = roleConfig(profile?.role);
+  const links = configuration.navigation;
 
   const handleLogout = async () => {
     await dispatch(logout());
@@ -71,15 +73,18 @@ export default function AppShell({ children }) {
           <button className="sidebar-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><RiCloseLine /></button>
         </div>
         <div className="sidebar-context">
-          <span>{profile?.role_display || "Clinic account"}</span>
+          <span>{configuration.displayName}</span>
           <strong>{profile?.first_name} {profile?.last_name}</strong>
         </div>
         <nav className="sidebar-navigation" aria-label="Clinic portal navigation">
-          {links.map(([to, label, Icon]) => (
+          {links.map(([to, label, icon]) => {
+            const Icon = icons[icon] || RiDashboard3Line;
+            return (
             <NavLink key={to} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => isActive ? "active" : ""}>
               <Icon /><span>{label}</span>
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
         <div className="sidebar-footer">
           <NavLink to="/change-password" onClick={() => setMenuOpen(false)}><RiLockPasswordLine /><span>Change password</span></NavLink>
@@ -92,7 +97,7 @@ export default function AppShell({ children }) {
           <div className="portal-topbar-title"><strong>UITH School Complex Clinic</strong><span>Clinical portal</span></div>
           <div className="topbar-identity" title={profile?.email || profile?.username}>
             <span>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</span>
-            <div><strong>{profile?.first_name} {profile?.last_name}</strong><small>{profile?.role_display}</small></div>
+            <div><strong>{profile?.first_name} {profile?.last_name}</strong><small>{configuration.displayName}</small></div>
           </div>
         </header>
         <div className="portal-content">{children}</div>

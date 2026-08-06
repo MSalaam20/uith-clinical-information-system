@@ -1,6 +1,7 @@
 import apiClient from "./apiClient";
 import {
   APPOINTMENTS,
+  CLINIC_INTAKES,
   AUDIT_LOGS,
   CLINICAL_NOTES,
   DIAGNOSES,
@@ -58,10 +59,6 @@ const retrieve = async (endpoint, id) => {
   return response.data;
 };
 
-const remove = async (endpoint, id) => {
-  await apiClient.delete(`${endpoint}${id}/`);
-};
-
 const errorText = (value) => {
   if (Array.isArray(value)) return value.map(errorText).filter(Boolean).join(" ");
   if (value && typeof value === "object") {
@@ -114,7 +111,6 @@ export const clinicalApi = {
   updateClinicalNote: (id, payload) => update(CLINICAL_NOTES, id, payload),
   createDiagnosis: (payload) => create(DIAGNOSES, payload),
   updateDiagnosis: (id, payload) => update(DIAGNOSES, id, payload),
-  deleteDiagnosis: (id) => remove(DIAGNOSES, id),
   listIcdCodes: (search = "") => list(ICD_CODES, {
     search,
     page_size: 50,
@@ -144,9 +140,31 @@ export const clinicalApi = {
     return response.data;
   },
   cancelAppointment: async (id) => {
-    const response = await apiClient.post(`${APPOINTMENTS}${id}/cancel/`);
+    const response = await apiClient.post(`${APPOINTMENTS}${id}/cancel/`, {
+      reason: "Cancelled from appointment calendar",
+    });
     return response.data;
   },
+  listPatients: (params) => list(PATIENTS, { page_size: 100, ...params }),
+  listIntakes: (params) => list(CLINIC_INTAKES, { page_size: 100, ordering: "-created_at", ...params }),
+  getIntake: (id) => retrieve(CLINIC_INTAKES, id),
+  createIntake: (payload) => create(CLINIC_INTAKES, payload),
+  submitIntake: (id) => create(`${CLINIC_INTAKES}${id}/submit/`, {}),
+  beginIntakeReview: (id) => create(`${CLINIC_INTAKES}${id}/begin-review/`, {}),
+  listAvailableDoctors: async () => {
+    const response = await apiClient.get(`${CLINIC_INTAKES}available-doctors/`);
+    return response.data.results || [];
+  },
+  scheduleIntake: (id, payload) => create(`${CLINIC_INTAKES}${id}/schedule/`, payload),
+  rescheduleIntake: (id, payload) => create(`${CLINIC_INTAKES}${id}/reschedule/`, payload),
+  confirmIntake: (id) => create(`${CLINIC_INTAKES}${id}/confirm/`, {}),
+  startConsultation: (id) => create(`${CLINIC_INTAKES}${id}/start-consultation/`, {}),
+  markIntakeAttended: (id) => create(`${CLINIC_INTAKES}${id}/attend/`, {}),
+  completeIntake: (id, payload) => create(`${CLINIC_INTAKES}${id}/complete/`, payload),
+  reassignIntake: (id, payload) => create(`${CLINIC_INTAKES}${id}/reassign/`, payload),
+  correctIntake: (id, payload) => create(`${CLINIC_INTAKES}${id}/correct/`, payload),
+  archiveIntake: (id, reason) => create(`${CLINIC_INTAKES}${id}/archive/`, { reason }),
+  cancelIntake: (id, reason) => create(`${CLINIC_INTAKES}${id}/cancel/`, { reason }),
   listStaff: (params) => list(STAFF, { page_size: 15, ...params }),
   createStaff: (payload) => create(STAFF, payload),
   updateStaffRole: async (id, role) => {
