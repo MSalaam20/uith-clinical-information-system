@@ -63,7 +63,7 @@ export function ChangePasswordPage({ temporary = false }) {
           <PasswordField label="Current password" name="current_password" value={values.current_password} onChange={change} error={fields.current_password} autoComplete="current-password" />
           <PasswordField label="New password" name="new_password" value={values.new_password} onChange={change} error={fields.new_password} autoComplete="new-password" />
           <PasswordField label="Confirm new password" name="confirm_password" value={values.confirm_password} onChange={change} error={fields.confirm_password} autoComplete="new-password" />
-          <p className="password-guidance">Use at least 8 characters and avoid common or account-related passwords.</p>
+          <p className="password-guidance">Use at least 6 characters. Words, numbers or a memorable phrase are accepted.</p>
           <Button type="submit" className="w-100" disabled={loading}>{loading && <Spinner size="sm" />}{loading ? "Updating password" : "Update password"}</Button>
         </Form>
       </section>

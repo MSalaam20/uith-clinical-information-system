@@ -181,8 +181,8 @@ class AdministratorBootstrapTests(APITestCase):
         self.assertEqual(Profile.objects.filter(user=user).count(), 1)
         self.assertIn('Updated administrator', second_output)
 
-    def test_bootstrap_rejects_weak_password_without_partial_user(self):
-        with patch.dict(os.environ, {'TEST_ADMIN_PASSWORD': 'password'}):
+    def test_bootstrap_rejects_too_short_password_without_partial_user(self):
+        with patch.dict(os.environ, {'TEST_ADMIN_PASSWORD': 'short'}):
             with self.assertRaises(CommandError):
                 call_command('bootstrap_admin', **self.command_options)
         self.assertFalse(User.objects.filter(username='clinic.admin').exists())
@@ -240,7 +240,7 @@ class AccountLifecycleTests(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(response.data['account']['role'], role)
 
-    def test_staff_creation_rejects_duplicates_invalid_role_and_weak_password(self):
+    def test_staff_creation_rejects_duplicates_invalid_role_and_short_password(self):
         self.client.force_authenticate(self.admin)
         duplicate = self.client.post('/api/staff/', self.staff_payload(
             username='unique.user', email='admin@clinic.test'
@@ -251,7 +251,7 @@ class AccountLifecycleTests(APITestCase):
         weak = self.client.post('/api/staff/', self.staff_payload(
             username='weak.user',
             email='weak@clinic.test',
-            temporary_password='password',
+            temporary_password='short',
         ))
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(invalid_role.status_code, status.HTTP_400_BAD_REQUEST)
@@ -298,7 +298,7 @@ class AccountLifecycleTests(APITestCase):
         self.assertEqual(relogin.status_code, status.HTTP_200_OK)
         self.assertTrue(AuditLog.objects.filter(action='password_changed').exists())
 
-    def test_password_change_rejects_wrong_current_and_weak_new_password(self):
+    def test_password_change_rejects_wrong_current_and_short_new_password(self):
         self.client.force_authenticate(self.doctor)
         wrong = self.client.post('/api/account/change-password/', {
             'current_password': 'wrong',
@@ -307,11 +307,24 @@ class AccountLifecycleTests(APITestCase):
         })
         weak = self.client.post('/api/account/change-password/', {
             'current_password': 'DoctorPass123!',
-            'new_password': 'password',
-            'confirm_password': 'password',
+            'new_password': 'short',
+            'confirm_password': 'short',
         })
         self.assertEqual(wrong.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(weak.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_change_accepts_memorable_account_related_password(self):
+        self.doctor.first_name = 'Olawale'
+        self.doctor.save(update_fields=['first_name'])
+        self.client.force_authenticate(self.doctor)
+        response = self.client.post('/api/account/change-password/', {
+            'current_password': 'DoctorPass123!',
+            'new_password': 'OLAWALE1234',
+            'confirm_password': 'OLAWALE1234',
+        })
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.doctor.refresh_from_db()
+        self.assertTrue(self.doctor.check_password('OLAWALE1234'))
 
     def test_deactivated_account_cannot_login(self):
         self.doctor.is_active = False

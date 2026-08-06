@@ -24,6 +24,12 @@ test("change password validates matching confirmation before API submission", ()
   expect(clinicalApi.changePassword).not.toHaveBeenCalled();
 });
 
+test("change password shows the simplified memorable-password rule", () => {
+  renderWithStore(<ChangePasswordPage temporary />);
+  expect(screen.getByText(/at least 6 characters/i)).toBeInTheDocument();
+  expect(screen.getByText(/memorable phrase/i)).toBeInTheDocument();
+});
+
 test("forgot password form submits a generic recovery request", async () => {
   clinicalApi.requestPasswordReset.mockResolvedValue({});
   renderWithStore(<ForgotPasswordPage />);
