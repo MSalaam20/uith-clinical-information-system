@@ -5,8 +5,42 @@ Health Clinical Database Information** for the University of Ilorin Teaching
 Hospital School Complex Clinic, Amilegbe, Ilorin. It is an existing Django REST
 Framework and React application that has been hardened and extended in place.
 
+> **Academic project only:** Academic clinical information-system prototype
+> using synthetic demonstration data. This is not an officially deployed UITH
+> or LAUTECH production healthcare system. Do not use it for real patient care.
+
 All included patient and account information is synthetic demonstration data.
 Do not enter real patient information in an unsecured development environment.
+
+## Live deployment
+
+| Resource | Address |
+|---|---|
+| GitHub repository | Pending private GitHub repository creation |
+| React application | Pending authenticated Vercel deployment |
+| Django API | Pending authenticated Railway deployment |
+| Health check | Pending Railway domain: `/health/` |
+| Swagger | Pending Railway domain: `/swagger/` (administrator-only in production) |
+| ReDoc | Pending Railway domain: `/redoc/` (administrator-only in production) |
+
+These are deliberately factual placeholders. No public deployment is claimed
+until the provider URLs have been created and verified.
+
+## Interface evidence
+
+All screenshots below contain controlled synthetic demonstration data.
+
+![Landing page and clinic workflow](docs/screenshots/landing-workflow-desktop.png)
+
+| Receptionist portal | Nurse queue |
+|---|---|
+| ![Synthetic receptionist dashboard](docs/screenshots/receptionist-dashboard.png) | ![Synthetic nurse queue](docs/screenshots/nurse-queue.png) |
+
+| Doctor queue and consultation entry | Student care journey |
+|---|---|
+| ![Synthetic doctor queue](docs/screenshots/doctor-queue.png) | ![Synthetic completed student care journey](docs/screenshots/student-care-journey-completed.png) |
+
+![Synthetic Doctor-in-Charge dashboard](docs/screenshots/doctor-in-charge-dashboard.png)
 
 ## Technology stack
 
@@ -24,6 +58,38 @@ This completion does not force a local MySQL 8 upgrade. The optional Docker
 environment retains a MySQL 8 service for independent container deployments.
 The implementation does not use PostgreSQL. phpMyAdmin may inspect or administer
 the database, but the application backend remains Django.
+
+## Main features
+
+- Doctor-in-Charge, doctor, nurse, receptionist and student portals
+- Reception-to-nurse-to-doctor intake and consultation workflow
+- Student registration and exact matriculation-number portal identity
+- Appointments, visits, vital signs, notes, ICD-11 diagnoses and prescriptions
+- Student-visible care journey and approved clinical outcomes
+- Staff provisioning, account lifecycle controls and append-oriented audit logs
+- Backend-enforced role and ownership permissions with JWT authentication
+
+## Database design summary
+
+The normalized MySQL/MariaDB model links one patient identity to repeat clinic
+intakes, appointments and visits. Visits own structured vital signs, clinical
+notes, diagnoses and prescriptions; prescriptions own validated line items.
+Foreign keys preserve clinical relationships, transactions protect multi-step
+state changes, InnoDB supplies referential integrity, and `utf8mb4` supports
+complete Unicode storage. A schema-driven record subsystem remains available
+for controlled custom clinical forms.
+
+## Deployment architecture
+
+- GitHub stores the private-first source repository and runs CI.
+- Vercel builds only `frontend/` and hosts the React SPA on HTTPS.
+- Railway builds only `backend/` and runs Django through Gunicorn.
+- Railway MySQL runs in the same Railway project; Django uses its private host.
+- `REACT_APP_BASE_URL` points the Vercel build to the Railway `/api/` URL.
+- No PostgreSQL service, custom paid domain, Redis or Celery service is needed.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for provider setup and
+[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for release evidence.
 
 ## Project structure
 
@@ -253,6 +319,7 @@ password before ordinary application routes become available.
 | `POST /api/staff/{id}/reset-temporary-password/` | Administrator-issued one-time staff password |
 | `PATCH /api/staff/{id}/status/` | Administrator-only activation/deactivation |
 | `/api/dashboard/summary/` | Role-filtered live dashboard values |
+| `GET /health/` | Public non-sensitive backend liveness check |
 
 Swagger is available at `/swagger/` and Redoc at `/redoc/` when
 `DJANGO_DEBUG=True`. Production documentation access is administrator-only.
@@ -333,9 +400,9 @@ npm.cmd test
 npm.cmd run build
 ```
 
-Latest verified local result (5 August 2026): Django found 78 tests and all 78
-passed in 305.647 seconds; Jest ran 52 tests across 17 suites and all 52 passed
-in 68.416 seconds. The top-level dependency check also succeeded. The
+Latest verified local result (6 August 2026): Django found 84 tests and all 84
+passed in 371 seconds; Jest ran 54 tests across 17 suites and all 54 passed in
+42.566 seconds. The dependency-tree check and `pip check` also succeeded. The
 route-split React build compiled successfully with a 134.6 kB initial
 JavaScript bundle and 38.46 kB main CSS bundle after gzip; operational routes
 are emitted as on-demand chunks. The older CRA toolchain emits a Node
@@ -365,6 +432,8 @@ docker compose build
   Doctor-in-Charge archive/correction actions require a reason and are audited.
 - Embedded record images are restricted to JPEG, PNG and WebP, limited to 5 MB,
   assigned generated names and constrained to their record directory.
+- `ALLOW_MEDIA_UPLOADS=False` blocks new patient photographs and embedded record
+  images when durable media storage has not been configured.
 - Audit metadata recursively excludes password, token, authorization and secret
   keys, including nested objects and arrays. Audit records are read-only through
   the API and Django administration.
@@ -384,10 +453,18 @@ docker compose build
   the current implementation.
 - Docker execution is not verified on this computer because Docker Desktop is
   not installed; local Django, React and MariaDB are the verified path.
+- Production password-reset email remains unavailable while the console email
+  backend is selected. Password changes continue to work; a real email provider
+  must be configured and tested before reset delivery is claimed.
+- Media persistence is unverified until a Railway volume is mounted at
+  `/app/media` and survives a redeployment. The initial safe setting disables
+  upload mutation instead of relying on an ephemeral filesystem.
 - The role workflow is also exercised in headless Microsoft Edge through the
   DevTools protocol. Evidence is stored in `docs/BROWSER_VERIFICATION.json` and
   `docs/screenshots/`; `scripts/browser_verify.mjs` reproduces the checks.
-- `npm audit --omit=dev` currently reports two moderate React Router advisories.
+- The most recent recorded `npm audit --omit=dev` reports two moderate React
+  Router advisories. A fresh online audit was unavailable during deployment
+  preparation, so this remains the latest known result rather than a new scan.
   The available v7 releases overlap with a newer high-severity RSC advisory, so
   the verified v6 line was retained. This client uses no SSR/RSC and no
   user-controlled redirect targets. The full audit also reports findings in CRA
@@ -411,3 +488,11 @@ normalized clinical routes, audit logging and the automated test evidence.
 
 See `ACADEMIC_CORRECTIONS.md` for exact report edits and `DEFENCE_DEMO.md` for
 the defence-day demonstration sequence.
+
+## Release information
+
+- Starting deployment-preparation commit: `ee1fe68`
+- Intended first stable portfolio tag: `v1.0.0`
+- Current release state: local preparation in progress; hosted provider steps
+  remain pending until browser authentication and private repository creation
+- No explicit software licence is included in this repository

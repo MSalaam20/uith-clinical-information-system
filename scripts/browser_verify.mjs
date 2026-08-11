@@ -235,7 +235,7 @@ async function login(tools, portal, username) {
   await waitText(tools, "UITH School Complex Clinic");
   await tools.evaluate(`window.dispatchEvent(new CustomEvent("uith:open-login", { detail: { portalType: ${quote(portal)} } })); true`);
   await waitText(tools, portal === "student" ? "Student Patient Portal" : "Clinical Staff Portal");
-  await setField(tools, portal === "student" ? "Matriculation number or username" : "Username or email", username);
+  await setField(tools, portal === "student" ? "Matriculation number" : "Username or email", username);
   await setField(tools, "Password", PASSWORD);
   await clickText(tools, portal === "student" ? "Sign in to student portal" : "Sign in to staff portal");
   await waitText(tools, "Sign out", 20000);
@@ -307,7 +307,7 @@ async function main() {
   });
 
   await record("Student sees sent-to-nurse status and ownership guard", async () => {
-    await login(tools, "student", "uith_2021_52HL034");
+    await login(tools, "student", "2021/52HL034");
     await waitFor(tools, `document.body.innerText.includes(${quote(TARGET_REASON)})`, "student care request", 20000);
     await assertExcludes(tools, ["Staff Management", "Audit Logs", "Student Directory"]);
     await assertResponsive(tools, "Student", checks);
@@ -348,7 +348,7 @@ async function main() {
   });
 
   await record("Student sees scheduled appointment", async () => {
-    await login(tools, "student", "uith_2021_52HL034");
+    await login(tools, "student", "2021/52HL034");
     await waitFor(tools, `document.body.innerText.includes(${quote(TARGET_REASON)}) && document.body.innerText.includes("Jeremiah Adebayo")`, "student appointment details", 20000);
     await assertContains(tools, ["Jeremiah Adebayo", TARGET_REASON]);
     await logout(tools);
@@ -424,7 +424,7 @@ async function main() {
   });
 
   await record("Student sees completed care and approved prescription", async () => {
-    await login(tools, "student", "uith_2021_52HL034");
+    await login(tools, "student", "2021/52HL034");
     await waitFor(tools, `document.body.innerText.includes("This clinic visit has been completed.") || document.body.innerText.includes("A follow-up visit has been recommended.")`, "completed student care state", 20000);
     await assertContains(tools, ["Browser-verified consultation completed", "Paracetamol", "Return to clinic if symptoms persist"]);
     await screenshot(tools, "student-care-journey-completed.png");

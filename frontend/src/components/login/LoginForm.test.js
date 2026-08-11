@@ -17,12 +17,12 @@ const renderLogin = (portalType) => {
 
 test.each([
   ["staff", "dr.jeremiah", "SyntheticTestPass123!", "DC"],
-  ["student", "uith_2021_52HL034", "SyntheticTestPass123!", "PT"],
+  ["student", "2021/52HL034", "SyntheticTestPass123!", "PT"],
 ])("demo %s account follows its portal login", async (portalType, username, password, role) => {
   apiClient.post.mockResolvedValueOnce({ data: { access: "access-token", refresh: "refresh-token" } });
   apiClient.get.mockResolvedValueOnce({ data: { role, role_display: role, must_change_password: false } });
   renderLogin(portalType);
-  fireEvent.change(screen.getByLabelText(portalType === "staff" ? "Username or email" : "Matriculation number or username"), { target: { value: username } });
+  fireEvent.change(screen.getByLabelText(portalType === "staff" ? "Username or email" : "Matriculation number"), { target: { value: username } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: password } });
   fireEvent.click(screen.getByRole("button", { name: /sign in to/i }));
   expect(await screen.findByText("Dashboard reached")).toBeInTheDocument();

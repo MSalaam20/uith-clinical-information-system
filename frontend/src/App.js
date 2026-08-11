@@ -62,6 +62,7 @@ const App = () => {
         <Suspense fallback={<main className="standalone-state"><StatePanel title="Loading workspace" message="Preparing the clinic interface." /></main>}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LandingPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
             <Route path="/change-temporary-password" element={protectedPage(<ChangePasswordPage temporary />, null, false)} />

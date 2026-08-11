@@ -40,4 +40,4 @@ DEMO_STUDENTS = (
 
 
 def student_username(matric_number):
-    return f'uith_{matric_number.replace("/", "_")}'
+    return matric_number

@@ -120,7 +120,7 @@ export default function PatientForm() {
             <Form.Control type="file" name="photo" accept="image/jpeg,image/png,image/webp" ref={fileInput} onChange={changePhoto} />
           </div>
         </Form.Group>
-        {field("matric_number", "Student or hospital number", { maxLength: 20 })}
+        {field("matric_number", "Student matriculation number", { required: true, maxLength: 20, placeholder: "e.g. DEMO/2026/001" })}
         {field("department", "Department", { maxLength: 150 })}
         {field("first_name", "First name", { required: true, maxLength: 100 })}
         {field("middle_name", "Middle name", { maxLength: 100 })}
@@ -132,10 +132,10 @@ export default function PatientForm() {
           </Form.Select>
         </Form.Group>
         {field("date_of_birth", "Date of birth", { type: "date", required: true, max: new Date().toISOString().slice(0, 10) })}
-        {field("phone_number", "Phone number", { type: "tel", maxLength: 11, placeholder: "08012345678" })}
+        {field("phone_number", "Phone number", { type: "tel", maxLength: 11, placeholder: "08000000000" })}
         {field("email", "Email", { type: "email" })}
         {field("next_of_kin", "Next of kin", { maxLength: 200 })}
-        {field("emergency_contact", "Emergency contact", { type: "tel", maxLength: 11, placeholder: "08012345678" })}
+        {field("emergency_contact", "Emergency contact", { type: "tel", maxLength: 11, placeholder: "08000000000" })}
         {field("address", "Address", { wide: true, maxLength: 200 })}
       </Row>
       <div className="patient-form-actions">

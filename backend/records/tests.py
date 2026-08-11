@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -519,6 +520,19 @@ class NestedFileHandlingTests(APITestCase):
             )
             filename = result['section']['images'][0]
             self.assertTrue((Path(directory) / filename).exists())
+
+    @override_settings(ALLOW_MEDIA_UPLOADS=False)
+    def test_embedded_image_is_rejected_when_deployment_disables_media(self):
+        encoded = base64.b64encode(
+            b'\x89PNG\r\n\x1a\n' + b'synthetic-png-content'
+        ).decode('ascii')
+        data = {'image': f'data:image/png;base64,{encoded}'}
+
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValidationError):
+                find_and_replace_files_in_json(
+                    data, 'data:image/', 'record-file', directory
+                )
 
     def test_invalid_base64_is_rejected(self):
         data = {'image': 'data:image/png;base64,not-valid***'}

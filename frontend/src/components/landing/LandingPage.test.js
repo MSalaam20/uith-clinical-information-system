@@ -33,6 +33,17 @@ test("renders the clinic workflow and four synthetic product previews", async ()
   expect(screen.getByRole("heading", { name: "Student Journey" })).toBeInTheDocument();
 });
 
+test("renders the project developer, supervisor and academic affiliation", async () => {
+  clinicalApi.getDemoAccess.mockResolvedValue({ accounts: [] });
+  await act(async () => { render(<MemoryRouter><LandingPage /></MemoryRouter>); });
+  expect(screen.getAllByText("Adebayo").length).toBeGreaterThan(0);
+  expect(screen.getByText("Mrs. Y. S. Jeremiah")).toBeInTheDocument();
+  expect(screen.getAllByText("Ladoke Akintola University of Technology").length).toBeGreaterThan(0);
+  expect(screen.getByText(/Faculty of Computing and Informatics/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Department of Computer Science/).length).toBeGreaterThan(0);
+  expect(screen.getByText(/not an officially deployed UITH or LAUTECH/i)).toBeInTheDocument();
+});
+
 test("care workflow exposes keyboard-focusable stages and updates its detail", async () => {
   clinicalApi.getDemoAccess.mockResolvedValue({ accounts: [] });
   await act(async () => { render(<MemoryRouter><LandingPage /></MemoryRouter>); });

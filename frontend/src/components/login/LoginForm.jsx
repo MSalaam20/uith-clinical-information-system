@@ -43,8 +43,8 @@ const LoginForm = ({ onLoginSuccess, portalType = "staff" }) => {
       {errorMessage && <Alert variant="danger" role="alert">{errorMessage}</Alert>}
       <Form onSubmit={handleLogin}>
         <Form.Group className="mb-3" controlId={`login-identifier-${portalType}`}>
-          <Form.Label>{isStudentPortal ? "Matriculation number or username" : "Username or email"}</Form.Label>
-          <Form.Control type="text" value={identifier} placeholder={isStudentPortal ? "Enter matriculation number or username" : "Enter username or email"} autoComplete="username" onChange={(event) => setIdentifier(event.target.value)} autoFocus />
+          <Form.Label>{isStudentPortal ? "Matriculation number" : "Username or email"}</Form.Label>
+          <Form.Control type="text" value={identifier} placeholder={isStudentPortal ? "Enter exact matriculation number" : "Enter username or email"} autoComplete="username" onChange={(event) => setIdentifier(event.target.value)} autoFocus />
         </Form.Group>
         <Form.Group className="mb-2" controlId={`login-password-${portalType}`}>
           <Form.Label>Password</Form.Label>

@@ -5,7 +5,7 @@ from django.urls import include, path
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from .views import dashboard_summary, icd11_search
+from .views import dashboard_summary, health, icd11_search
 
 
 schema_is_public = settings.DEBUG or settings.API_DOCS_PUBLIC
@@ -26,6 +26,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path('health/', health, name='health'),
     path('admin/', admin.site.urls),
     path('api/', include('users.urls', namespace='users')),
     path('api/', include('records.urls', namespace='records')),

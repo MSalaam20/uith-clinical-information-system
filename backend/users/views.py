@@ -341,5 +341,5 @@ class DemoAccessView(APIView):
             {'role': 'Doctor', 'portal': 'staff', 'username': 'dr.jeremiah', 'password': password},
             {'role': 'Nurse', 'portal': 'staff', 'username': 'nurse.fatima', 'password': password},
             {'role': 'Receptionist', 'portal': 'staff', 'username': 'mr.ibrahim', 'password': password},
-            {'role': 'Student', 'portal': 'student', 'username': 'uith_2021_52HL034', 'password': password},
+            {'role': 'Student', 'portal': 'student', 'username': '2021/52HL034', 'password': password},
         ]})

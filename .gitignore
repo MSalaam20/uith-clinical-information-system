@@ -1,5 +1,7 @@
 # Secrets and local environments
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 .venv/
@@ -10,24 +12,31 @@ env/
 __pycache__/
 *.py[cod]
 *.log
+*.pyo
 .coverage
 coverage/
 htmlcov/
+.pytest_cache/
 
 # Django runtime data
 backend/debug.log
 backend-runserver.out.log
 backend-runserver.err.log
 media/
+backend/static/
 *.sqlite3
 *.sql
+*.dump
 
 # Frontend generated files
 frontend/node_modules/
 frontend/build/
+dist/
+.vercel/
+.railway/
 
 # IDE and operating-system files
 .idea/
 .vscode/
 .DS_Store
-
+Thumbs.db

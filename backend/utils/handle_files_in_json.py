@@ -6,6 +6,7 @@ import re
 import uuid
 from pathlib import Path
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 
@@ -78,6 +79,8 @@ def base64_to_file(file_data, prefix):
 
 
 def _store_data_url(value, prefix, path):
+    if not settings.ALLOW_MEDIA_UPLOADS:
+        raise ValidationError('Media uploads are disabled for this deployment.')
     if path is None:
         raise ValidationError('A storage directory is required for embedded files.')
     filename, decoded = base64_to_file(value, prefix)

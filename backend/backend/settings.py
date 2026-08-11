@@ -112,6 +112,7 @@ CSRF_TRUSTED_ORIGINS = config(
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
@@ -197,6 +198,7 @@ FRONTEND_URL = config('FRONTEND_URL', default='http://127.0.0.1:3001')
 SHOW_DEMO_CREDENTIALS = env_bool('SHOW_DEMO_CREDENTIALS', default=False)
 ALLOW_DEMO_ACCOUNTS = env_bool('ALLOW_DEMO_ACCOUNTS', default=False)
 ALLOW_DEMO_DATA_PURGE = env_bool('ALLOW_DEMO_DATA_PURGE', default=False)
+ALLOW_MEDIA_UPLOADS = env_bool('ALLOW_MEDIA_UPLOADS', default=DEBUG)
 
 
 WSGI_APPLICATION = 'backend.wsgi.application'
@@ -267,6 +269,15 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -293,6 +304,7 @@ SECURE_SSL_REDIRECT = env_bool(
     'DJANGO_SECURE_SSL_REDIRECT',
     default=env_bool('SECURE_SSL_REDIRECT', default=False),
 )
+SECURE_REDIRECT_EXEMPT = [r'^health/$']
 SECURE_HSTS_SECONDS = config(
     'DJANGO_SECURE_HSTS_SECONDS',
     default=config('SECURE_HSTS_SECONDS', default=0),

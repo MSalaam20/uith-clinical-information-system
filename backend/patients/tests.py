@@ -1,6 +1,8 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -56,6 +58,23 @@ class PatientWorkflowTests(APITestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('phone_number', serializer.errors)
 
+    @override_settings(ALLOW_MEDIA_UPLOADS=False)
+    def test_photo_upload_is_rejected_when_deployment_disables_media(self):
+        photo = SimpleUploadedFile(
+            'synthetic.png', b'not-persisted', content_type='image/png'
+        )
+        serializer = PatientSerializer(data={
+            'matric_number': 'TEST/UPLOAD/OFF',
+            'first_name': 'Synthetic',
+            'last_name': 'Student',
+            'date_of_birth': '2000-01-01',
+            'gender': 'F',
+            'photo': photo,
+        })
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('photo', serializer.errors)
+
     def test_receptionist_can_register_patient(self):
         self.client.force_authenticate(self.receptionist)
         response = self.client.post('/api/patients/', {
@@ -68,6 +87,28 @@ class PatientWorkflowTests(APITestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data['uuid'])
+
+    def test_matriculation_number_is_required_for_registration(self):
+        self.client.force_authenticate(self.receptionist)
+        response = self.client.post('/api/patients/', {
+            'first_name': 'No',
+            'last_name': 'Matriculation',
+            'date_of_birth': '2000-01-01',
+            'gender': 'F',
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('matric_number', response.data)
+
+    def test_correcting_matriculation_number_updates_student_login(self):
+        self.client.force_authenticate(self.receptionist)
+        response = self.client.patch(
+            f'/api/patients/{self.patient.id}/',
+            {'matric_number': 'TEST/101/CORRECTED'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.username, 'TEST/101/CORRECTED')
 
     def test_receptionist_cannot_delete_patient(self):
         self.client.force_authenticate(self.receptionist)

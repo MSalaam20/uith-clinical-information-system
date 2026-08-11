@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -161,6 +162,23 @@ class PatientSerializer(serializers.ModelSerializer):
             'id', 'uuid', 'user', 'is_active', 'is_demo', 'archived_at',
             'archive_reason', 'created_at', 'updated_at',
         ]
+        extra_kwargs = {
+            'matric_number': {'required': True, 'allow_blank': False},
+        }
+
+    def validate_matric_number(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Student matriculation number is required.')
+
+        username_conflict = User.objects.filter(username__iexact=value)
+        if self.instance and self.instance.user_id:
+            username_conflict = username_conflict.exclude(pk=self.instance.user_id)
+        if username_conflict.exists():
+            raise serializers.ValidationError(
+                'This matriculation number is already used by another login account.'
+            )
+        return value
 
     def validate_date_of_birth(self, value):
         if value > timezone.localdate():
@@ -194,12 +212,28 @@ class PatientSerializer(serializers.ModelSerializer):
     def validate_photo(self, value):
         if not value:
             return value
+        if not settings.ALLOW_MEDIA_UPLOADS:
+            raise serializers.ValidationError(
+                'Media uploads are disabled for this deployment.'
+            )
         if value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError('Patient photographs must be 5 MB or smaller.')
         allowed_types = {'image/jpeg', 'image/png', 'image/webp'}
         if getattr(value, 'content_type', None) not in allowed_types:
             raise serializers.ValidationError('Use a JPEG, PNG, or WebP photograph.')
         return value
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        patient = super().update(instance, validated_data)
+        if (
+            patient.user_id
+            and patient.matric_number
+            and patient.user.username != patient.matric_number
+        ):
+            patient.user.username = patient.matric_number
+            patient.user.save(update_fields=['username'])
+        return patient
 
 
 class IntakePatientSerializer(serializers.ModelSerializer):
@@ -403,19 +437,12 @@ class IntakeCorrectionSerializer(IntakeReasonSerializer):
 
 
 class StudentPortalAccountSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
     email = serializers.EmailField(required=False, allow_blank=True)
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     temporary_password = serializers.CharField(
         write_only=True, required=False, trim_whitespace=False
     )
-
-    def validate_username(self, value):
-        value = value.strip()
-        if User.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError('This username is already in use.')
-        return value
 
     def validate_email(self, value):
         value = value.strip().lower()
@@ -429,10 +456,19 @@ class StudentPortalAccountSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'This patient already has a linked portal account.'
             )
+        matric_number = (patient.matric_number or '').strip()
+        if not matric_number:
+            raise serializers.ValidationError({
+                'matric_number': 'Add the student matriculation number before creating an account.'
+            })
+        if User.objects.filter(username__iexact=matric_number).exists():
+            raise serializers.ValidationError({
+                'matric_number': 'This matriculation number is already used by another login account.'
+            })
         password = attrs.get('temporary_password')
         if password:
             candidate = User(
-                username=attrs.get('username', ''),
+                username=matric_number,
                 email=attrs.get('email', ''),
                 first_name=attrs.get('first_name') or patient.first_name or '',
                 last_name=attrs.get('last_name') or patient.last_name or '',
@@ -448,7 +484,7 @@ class StudentPortalAccountSerializer(serializers.Serializer):
         password = validated_data.pop('temporary_password', None)
         password = password or generate_temporary_password()
         user = User(
-            username=validated_data['username'],
+            username=patient.matric_number.strip(),
             email=validated_data.get('email') or patient.email or '',
             first_name=(
                 validated_data.get('first_name') or patient.first_name or ''

@@ -415,7 +415,7 @@ class StudentAccountProvisioningTests(APITestCase):
         )
 
     def account_payload(self):
-        return {'username': 'portal.student', 'email': 'portal.student@example.com'}
+        return {'email': 'portal.student@example.com'}
 
     def test_receptionist_creates_linked_student_account_and_duplicate_is_rejected(self):
         self.client.force_authenticate(self.receptionist)
@@ -425,7 +425,8 @@ class StudentAccountProvisioningTests(APITestCase):
         )
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
         self.patient.refresh_from_db()
-        self.assertEqual(self.patient.user.username, 'portal.student')
+        self.assertEqual(self.patient.user.username, 'TEST/PORTAL/001')
+        self.assertEqual(created.data['account']['username'], 'TEST/PORTAL/001')
         self.assertEqual(self.patient.user.user.role, Role.ROLE_PATIENT)
         self.assertTrue(self.patient.user.user.must_change_password)
         self.assertTrue(self.patient.user.check_password(
@@ -433,7 +434,7 @@ class StudentAccountProvisioningTests(APITestCase):
         ))
         duplicate = self.client.post(
             f'/api/patients/{self.patient.pk}/portal-account/',
-            {'username': 'another.student', 'email': 'another@example.com'},
+            {'email': 'another@example.com'},
         )
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(AuditLog.objects.filter(action='student_account_created').exists())
@@ -461,12 +462,12 @@ class StudentAccountProvisioningTests(APITestCase):
         temporary_password = created.data['temporary_password']
         self.client.force_authenticate(user=None)
         staff_login = self.client.post('/api/auth/jwt/create/', {
-            'username': 'portal.student',
+            'username': 'TEST/PORTAL/001',
             'password': temporary_password,
             'portal_type': 'staff',
         })
         student_login = self.client.post('/api/auth/jwt/create/', {
-            'username': 'portal.student',
+            'username': 'TEST/PORTAL/001',
             'password': temporary_password,
             'portal_type': 'student',
         })
@@ -494,11 +495,11 @@ class DemoAccountCommandTests(APITestCase):
         self.assertEqual(
             User.objects.filter(username__in=[
                 'dr.jeremiah', 'nurse.fatima', 'mr.ibrahim',
-                'uith_2021_52HL034',
+                '2021/52HL034',
             ]).count(),
             4,
         )
-        student = User.objects.get(username='uith_2021_52HL034')
+        student = User.objects.get(username='2021/52HL034')
         self.assertEqual(student.user.role, Role.ROLE_PATIENT)
         self.assertEqual(student.patient_profile.matric_number, '2021/52HL034')
         self.assertEqual(

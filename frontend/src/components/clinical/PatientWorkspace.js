@@ -128,7 +128,7 @@ function PatientHeader({ patient, loading, refresh }) {
 
 function Overview({ patient, data }) {
   const facts = [
-    ["Student/hospital number", patient.matric_number || "Not recorded"],
+    ["Student matriculation number", patient.matric_number || "Not recorded"],
     ["Department", patient.department || "Not recorded"],
     ["Email", patient.email || "Not recorded"],
     ["Address", patient.address || "Not recorded"],

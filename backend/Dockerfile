@@ -10,4 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 backend.wsgi"]
+RUN DJANGO_DEBUG=False \
+    DJANGO_SECRET_KEY=synthetic-build-only-secret-key-not-for-runtime \
+    python manage.py collectstatic --noinput
+
+CMD ["sh", "-c", "gunicorn backend.wsgi:application --bind [::]:${PORT:-8000}"]

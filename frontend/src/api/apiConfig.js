@@ -1,5 +1,7 @@
-export const BASE_URL =
+const configuredBaseUrl =
   process.env.REACT_APP_BASE_URL || "http://127.0.0.1:8001/api/";
+
+export const BASE_URL = `${configuredBaseUrl.trim().replace(/\/+$/, "")}/`;
 export const LOGIN_ENDPOINT = "auth/jwt/create/";
 export const REFRESH_ENDPOINT = "auth/jwt/refresh/";
 export const PATIENTS = "patients/";

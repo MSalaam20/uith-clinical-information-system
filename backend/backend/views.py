@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
@@ -49,6 +50,10 @@ ICD11_TERMS = [
         'chapter': 'Diseases of the nervous system',
     },
 ]
+
+
+def health(request):
+    return JsonResponse({'status': 'ok'})
 
 
 @api_view(['GET'])
