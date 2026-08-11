@@ -16,15 +16,16 @@ Do not enter real patient information in an unsecured development environment.
 
 | Resource | Address |
 |---|---|
-| GitHub repository | Pending private GitHub repository creation |
-| React application | Pending authenticated Vercel deployment |
-| Django API | Pending authenticated Railway deployment |
-| Health check | Pending Railway domain: `/health/` |
-| Swagger | Pending Railway domain: `/swagger/` (administrator-only in production) |
-| ReDoc | Pending Railway domain: `/redoc/` (administrator-only in production) |
+| GitHub repository | [Private source repository](https://github.com/MSalaam20/uith-clinical-information-system) |
+| React application | [Vercel production application](https://uith-clinical-information-system.vercel.app/) |
+| Django API | [Railway production API](https://uith-clinical-information-system-production.up.railway.app/api/) |
+| Health check | [Railway health endpoint](https://uith-clinical-information-system-production.up.railway.app/health/) |
+| Swagger | [Production Swagger](https://uith-clinical-information-system-production.up.railway.app/swagger/) (administrator-only) |
+| ReDoc | [Production ReDoc](https://uith-clinical-information-system-production.up.railway.app/redoc/) (administrator-only) |
 
-These are deliberately factual placeholders. No public deployment is claimed
-until the provider URLs have been created and verified.
+The frontend, backend health endpoint, direct SPA route fallback, and Vercel-to-
+Railway CORS response were verified over HTTPS on August 11, 2026. The source
+repository remains private.
 
 ## Interface evidence
 

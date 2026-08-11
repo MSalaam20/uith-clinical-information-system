@@ -41,7 +41,7 @@ test("renders the project developer, supervisor and academic affiliation", async
   expect(screen.getAllByText("Ladoke Akintola University of Technology").length).toBeGreaterThan(0);
   expect(screen.getByText(/Faculty of Computing and Informatics/)).toBeInTheDocument();
   expect(screen.getAllByText(/Department of Computer Science/).length).toBeGreaterThan(0);
-  expect(screen.getByText(/not an officially deployed UITH or LAUTECH/i)).toBeInTheDocument();
+  expect(screen.getByText(/not an institutionally authorized clinical service/i)).toBeInTheDocument();
 });
 
 test("care workflow exposes keyboard-focusable stages and updates its detail", async () => {

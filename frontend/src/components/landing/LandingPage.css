@@ -11,7 +11,7 @@
 .landing-hero::before { background: rgba(3, 22, 40, 0.62); content: ""; inset: 0; position: absolute; }
 .landing-hero-inner { align-items: center; display: flex; min-height: inherit; position: relative; }
 .landing-hero-copy { max-width: 680px; padding: 3rem 0; }
-.prototype-label { background: rgba(197, 155, 71, 0.17); border: 1px solid rgba(223, 190, 119, 0.65); border-radius: var(--radius-sm); color: #f4d89f; display: inline-block; font-size: 0.75rem; font-weight: 800; margin-bottom: 1.25rem; padding: 0.45rem 0.65rem; text-transform: uppercase; }
+.project-status-label { background: rgba(197, 155, 71, 0.17); border: 1px solid rgba(223, 190, 119, 0.65); border-radius: var(--radius-sm); color: #f4d89f; display: inline-block; font-size: 0.75rem; font-weight: 800; margin-bottom: 1.25rem; padding: 0.45rem 0.65rem; text-transform: uppercase; }
 .landing-hero h1 { font-size: 3.65rem; font-weight: 780; line-height: 1.04; margin: 0 0 1rem; max-width: 650px; }
 .hero-lead { color: #e1e8ee; font-size: 1.25rem; line-height: 1.55; max-width: 620px; }
 .hero-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.75rem 0; }

@@ -76,7 +76,7 @@ export default function LandingPage() {
       <section className="landing-hero" style={{ backgroundImage: `url(${heroImage})` }}>
         <Container className="landing-hero-inner">
           <div className="landing-hero-copy">
-            <span className="prototype-label">Academic clinical informatics prototype</span>
+            <span className="project-status-label">Academic clinical information system</span>
             <h1>UITH School Complex Clinic</h1>
             <p className="hero-lead">An integrated electronic health record and clinic management system for coordinated student care.</p>
             <div className="hero-buttons">
@@ -114,7 +114,7 @@ export default function LandingPage() {
 
       <section className="product-preview-band" id="previews">
         <Container>
-          <div className="section-heading"><span className="eyebrow">Inside the system</span><h2>Four portals, one coordinated record</h2><p>Synthetic interface previews show each role at work.</p></div>
+          <div className="section-heading"><span className="eyebrow">Inside the system</span><h2>Four portals, one coordinated record</h2><p>Interface previews show each role at work.</p></div>
           <div className="preview-grid">{previews.map(({ role, title, Icon, accent, rows, action }) => <article className={`product-preview ${accent}`} key={title}><header><span className="browser-dots" aria-hidden="true"><i /><i /><i /></span><small>{role} workspace</small></header><div className="preview-title"><span><Icon /></span><div><small>UITH Clinic</small><h3>{title}</h3></div></div><dl>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><div className="preview-action"><RiCheckDoubleLine /> {action}</div></article>)}</div>
         </Container>
       </section>
@@ -147,7 +147,7 @@ export default function LandingPage() {
 
       {demoAccounts.length > 0 && <section className="demo-access-band" aria-label="Defence demo access"><Container><Accordion><Accordion.Item eventKey="0"><Accordion.Header>Defence Demo Access: synthetic test accounts</Accordion.Header><Accordion.Body><p>These credentials are enabled for development or academic defence only. They must be removed or changed before a real deployment.</p><div className="demo-account-grid">{demoAccounts.map((account) => <article key={account.username}><span>{account.role}</span><strong>{account.portal === "student" ? "Student Patient Portal" : "Clinical Staff Portal"}</strong><div><code>{account.username}</code><button onClick={() => copy(account.username, `${account.username}-username`)} aria-label={`Copy ${account.role} username`} title="Copy username"><RiFileCopyLine /></button></div><div><code>{account.password}</code><button onClick={() => copy(account.password, `${account.username}-password`)} aria-label={`Copy ${account.role} password`} title="Copy password"><RiFileCopyLine /></button></div>{copied.startsWith(account.username) && <small role="status">Copied</small>}</article>)}</div></Accordion.Body></Accordion.Item></Accordion></Container></section>}
 
-      <footer className="landing-footer"><Container><div><strong>UITH School Complex Clinic EHR</strong><span>Academic defence prototype, 2025/2026 session</span></div><nav aria-label="Landing page sections"><a href="#portals">Portals</a><a href="#workflow">Workflow</a><a href="#previews">Previews</a><a href="#security">Security</a></nav><p>Designed and developed by Adebayo, Department of Computer Science, Ladoke Akintola University of Technology.</p><p className="academic-disclaimer">Academic clinical information-system prototype using synthetic demonstration data. This is not an officially deployed UITH or LAUTECH production healthcare system.</p></Container></footer>
+      <footer className="landing-footer"><Container><div><strong>UITH School Complex Clinic EHR</strong><span>Final-year project, 2025/2026 session</span></div><nav aria-label="Landing page sections"><a href="#portals">Portals</a><a href="#workflow">Workflow</a><a href="#previews">Previews</a><a href="#security">Security</a></nav><p>Designed and developed by Adebayo, Department of Computer Science, Ladoke Akintola University of Technology.</p><p className="academic-disclaimer">Academic evaluation deployment using synthetic data. This is not an institutionally authorized clinical service; do not enter real patient information.</p></Container></footer>
     </main>
   );
 }

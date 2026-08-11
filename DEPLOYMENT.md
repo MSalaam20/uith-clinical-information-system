@@ -23,6 +23,21 @@ Railway MySQL service
 Only synthetic data may be hosted. Django is not deployed to Vercel, and the
 database must remain MySQL/MariaDB rather than PostgreSQL.
 
+## Current hosted deployment
+
+Verified August 11, 2026:
+
+- Private source: <https://github.com/MSalaam20/uith-clinical-information-system>
+- React application: <https://uith-clinical-information-system.vercel.app/>
+- Django API: <https://uith-clinical-information-system-production.up.railway.app/api/>
+- Health endpoint: <https://uith-clinical-information-system-production.up.railway.app/health/>
+- Database: Railway MySQL in the same project over private networking
+
+The Vercel application, direct SPA fallback, Railway health endpoint, and
+cross-origin preflight were verified over HTTPS. Railway displayed 26 days or
+$5.00 of trial credit remaining, and Vercel displayed the Hobby plan. No paid
+upgrade, payment method, custom domain, or PostgreSQL service was added.
+
 ## Cost and provider limits
 
 No plan upgrade, payment method, paid domain, or paid add-on is authorized by

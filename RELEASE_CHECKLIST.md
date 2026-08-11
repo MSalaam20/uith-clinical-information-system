@@ -25,9 +25,9 @@ or non-sensitive evidence links when each item is verified.
 
 ## GitHub
 
-- [ ] Empty private GitHub repository created
-- [ ] `origin` points to the intended repository
-- [ ] `main` pushed without force
+- [x] Empty private GitHub repository created
+- [x] `origin` points to the intended repository
+- [x] `main` pushed without force
 - [ ] GitHub Actions backend job passes with MariaDB
 - [ ] GitHub Actions frontend job passes
 - [ ] Description and recommended topics set
@@ -35,38 +35,45 @@ or non-sensitive evidence links when each item is verified.
 
 ## Railway
 
-- [ ] Current plan, credit, trial, and payment requirements recorded
-- [ ] One Railway project created
-- [ ] MySQL service created; no PostgreSQL service exists
-- [ ] Django service connected to the GitHub repository
-- [ ] Backend root directory is `backend`
-- [ ] Private MySQL variable references configured
-- [ ] Production Django security variables configured
-- [ ] Migrations applied successfully
+- [x] Current plan, credit, trial, and payment requirements recorded
+- [x] One Railway project created
+- [x] MySQL service created; no PostgreSQL service exists
+- [x] Django service connected to the GitHub repository
+- [x] Backend root directory is `backend`
+- [x] Private MySQL variable references configured
+- [x] Production Django security variables configured
+- [x] Migrations applied successfully
 - [ ] Static collection and Django admin assets verified
-- [ ] `/health/` returns HTTP 200
+- [x] `/health/` returns HTTP 200
 - [ ] `python manage.py check --deploy` reviewed
-- [ ] Production Doctor-in-Charge created through a hidden prompt
-- [ ] Controlled synthetic demo data seeded idempotently
-- [ ] No local SQL dump imported
-- [ ] Media uploads remain disabled or verified persistent volume is documented
+- [x] Production Doctor-in-Charge created through a hidden prompt
+- [x] Controlled synthetic demo data seeded idempotently
+- [x] No local SQL dump imported
+- [x] Media uploads remain disabled or verified persistent volume is documented
+
+Evidence recorded August 11, 2026: Railway trial displayed 26 days or $5.00
+credit remaining; no payment method, paid upgrade, custom domain, or PostgreSQL
+service was added. Synthetic demo accounts were deactivated after seeding.
 
 ## Vercel
 
-- [ ] Current plan and payment requirements recorded
-- [ ] Same GitHub repository imported
-- [ ] Frontend root directory is `frontend`
+- [x] Current plan and payment requirements recorded
+- [x] Same GitHub repository imported
+- [x] Frontend root directory is `frontend`
 - [ ] Node 20, `npm ci`, `npm run build`, and `build` output configured
-- [ ] `REACT_APP_BASE_URL` points to Railway HTTPS `/api/`
-- [ ] Production deployment returns HTTP 200
-- [ ] React assets load without blocking errors
-- [ ] Direct protected and public route refresh works
-- [ ] No localhost, mixed-content, `/api/api/`, or CORS request remains
+- [x] `REACT_APP_BASE_URL` points to Railway HTTPS `/api/`
+- [x] Production deployment returns HTTP 200
+- [x] React assets load without blocking errors
+- [x] Direct protected and public route refresh works
+- [x] No localhost, mixed-content, `/api/api/`, or CORS request remains
+
+Evidence recorded August 11, 2026: the project is on Vercel Hobby with the
+provider domain only; no paid feature or custom domain was enabled.
 
 ## Hosted workflow
 
-- [ ] Academic/synthetic-data disclaimer is visible
-- [ ] Demo credentials are hidden
+- [x] Academic/synthetic-data disclaimer is visible
+- [x] Demo credentials are hidden
 - [ ] Doctor-in-Charge login and logout work
 - [ ] Doctor login and logout work
 - [ ] Nurse login and logout work
@@ -86,14 +93,14 @@ or non-sensitive evidence links when each item is verified.
 - [ ] Receptionist cannot diagnose, prescribe, or delete clinical data
 - [ ] Nurse cannot diagnose, prescribe, or complete consultation
 - [ ] Ordinary doctor cannot access staff management or audit logs
-- [ ] Unauthenticated protected API request returns 401
+- [x] Unauthenticated protected API request returns 401
 - [ ] Authenticated forbidden request returns 403 or a secure 404
 
 ## Release completion
 
-- [ ] Live links added to README and deployment report
-- [ ] Password-reset email limitation recorded
-- [ ] Media persistence result recorded
+- [x] Live links added to README and deployment report
+- [x] Password-reset email limitation recorded
+- [x] Media persistence result recorded
 - [ ] Hosted screenshots contain no credentials or real data
 - [ ] Stable annotated tag created after hosted verification
 - [ ] Tag pushed and GitHub release created
